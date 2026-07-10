@@ -1,6 +1,5 @@
 import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
-import { colName } from "../model/cellRef";
-import { SheetModel } from "../model/SheetModel";
+import { colName, SheetModel } from "@vectojs/sheets-core";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 export interface SheetGridEvents {

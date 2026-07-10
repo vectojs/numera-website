@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SheetModel } from "../src/model/SheetModel";
+import { SheetModel } from "@vectojs/sheets-core";
 import { SheetController, SheetsApp } from "../src/view/SheetsApp";
 import { SheetViewport } from "../src/view/SheetViewport";
 

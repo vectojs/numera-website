@@ -1,8 +1,11 @@
 import { Scene } from "@vectojs/core";
 import { Input } from "@vectojs/ui";
-import { SheetHistory } from "../model/SheetHistory";
-import { copyRange, pasteText } from "../model/SheetClipboard";
-import { SheetModel } from "../model/SheetModel";
+import {
+  copyRange,
+  pasteText,
+  SheetHistory,
+  SheetModel,
+} from "@vectojs/sheets-core";
 import { SheetGridEntity } from "./SheetGridEntity";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 

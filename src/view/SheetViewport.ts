@@ -181,4 +181,4 @@ export class SheetViewport {
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
-import { normalizeRect, type Rect } from "../model/cellRef";
+import { normalizeRect, type Rect } from "@vectojs/sheets-core";

@@ -8,7 +8,9 @@
 Native Sheets stress-tests VectoJS with a virtualized 10,000 × 100 spreadsheet.
 The visible sheet is one retained canvas entity, not a DOM table: every cell
 position, hit test, selection rectangle, and scroll offset is explicit numeric
-scene state.
+scene state. Document semantics come from the exact-pinned published
+[`@vectojs/sheets-core`](https://www.npmjs.com/package/@vectojs/sheets-core)
+package; this repository owns only the VectoJS UI/UX adapter.
 
 ## Included core behavior
 

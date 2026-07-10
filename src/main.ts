@@ -1,6 +1,6 @@
 import { Scene } from "@vectojs/core";
 import { attachDevtools, auditScene } from "@vectojs/devtools";
-import { createDemoModel } from "./model/demoData";
+import { createDemoModel } from "@vectojs/sheets-core";
 import { SheetsApp } from "./view/SheetsApp";
 import { measureSceneContainer } from "./view/sceneSizing";
 
