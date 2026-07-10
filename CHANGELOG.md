@@ -13,6 +13,8 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Repository `Justfile` with shared development, verification, browser
+  verification, and Cloudflare Pages deployment entry points.
 - Exact-pinned `@vectojs/sheets-core@0.1.5` with common numeric, logical, and
   error-recovery formula functions.
 - Exact-pinned `@vectojs/devtools@0.3.0` with opt-in routing trace exposed by

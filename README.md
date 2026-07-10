@@ -45,7 +45,7 @@ future projects, as are `sheets-cli`, `sheets-skills`, and `sheets-mcp`.
 
 ```bash
 bun install
-bun run dev
+just dev
 ```
 
 Open [http://localhost:2323/?debug](http://localhost:2323/?debug) to attach the
@@ -57,10 +57,8 @@ this state and `auditScene(scene)` before using screenshots.
 ## Verify
 
 ```bash
-bun run format:check
-bun run lint
-bun run test
-bun run build
+just verify
+just browser-verify
 ```
 
 ## Deploy
@@ -70,14 +68,15 @@ Cloudflare Pages project is `sheets-website`; the fallback deployment URL is
 <https://sheets-website.pages.dev>. With an authenticated Wrangler session:
 
 ```bash
-bun run build
-bun run deploy
+just deploy
 ```
 
 The deployment script streams Wrangler output, waits for the final
 `Deployment complete!` marker, and then exits instead of waiting indefinitely
 for Wrangler logs. An upload-only message is not treated as a completed Pages
-deployment.
+deployment. `just deploy` runs the local non-browser verification gates and
+build before invoking that script; `just browser-verify` remains available for
+the complete Playwright matrix.
 
 ## Repository family
 
