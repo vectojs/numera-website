@@ -18,8 +18,8 @@ All notable changes to this project are documented in this file.
 - Repository `Justfile` with shared development, verification, selectable local
   browser verification, full CI browser matrix, and Cloudflare Pages deployment
   entry points.
-- Exact-pinned `@vectojs/sheets-core@0.1.5` with common numeric, logical, and
-  error-recovery formula functions.
+- Exact-pinned `@vectojs/sheets-core@0.2.0` with common numeric, logical, and
+  error-recovery formula functions plus undoable structural operations.
 - Exact-pinned `@vectojs/devtools@0.3.0` with opt-in routing trace exposed by
   `?debug` for deterministic Sheets interaction diagnosis.
 - Canvas-native virtualized 10,000 × 100 grid with frozen headers and responsive scene sizing.
@@ -34,3 +34,7 @@ All notable changes to this project are documented in this file.
 - Exact-pinned core upgrade with versioned workbook JSON and CSV exchange.
 - Canvas tab rename/delete controls with temporary IME-safe editor input.
 - Canvas JSON/CSV export controls and comma-delimited clipboard import.
+- Canvas row/column insertion and deletion controls backed by Core's sparse
+  structural history, formula-reference rewriting, and viewport-bound
+  reconciliation. Narrow viewports keep those controls while compacting
+  lower-priority export buttons.
