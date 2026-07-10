@@ -133,6 +133,7 @@ export class SheetsApp {
   readonly formulaBar: Input;
 
   private editor: Input | null = null;
+  private tabEditor: Input | null = null;
   private lastPointer: { cell: CellPosition; at: number } | null = null;
   private readonly keyboardListener: (event: KeyboardEvent) => void;
   private readonly copyListener: (event: ClipboardEvent) => void;
@@ -155,6 +156,8 @@ export class SheetsApp {
     this.tabs = new SheetTabsEntity(workbook, {
       onSelect: (id) => this.selectSheet(id),
       onAdd: () => this.addSheet(),
+      onRename: (id) => this.beginSheetRename(id),
+      onDelete: (id) => this.deleteSheet(id),
     });
     this.formulaBar = new Input({
       width: 320,
@@ -230,6 +233,14 @@ export class SheetsApp {
     this.selectSheet(sheet.id);
   }
 
+  deleteSheet(id: string): void {
+    this.removeTabEditor(false);
+    const wasActive = id === this.workbook.activeSheetId;
+    this.workbook.deleteSheet(id);
+    if (wasActive) this.rebuildActiveSheet();
+    this.scene.markDirty();
+  }
+
   destroy(): void {
     if (typeof window !== "undefined") {
       window.removeEventListener("keydown", this.keyboardListener);
@@ -238,6 +249,7 @@ export class SheetsApp {
       window.removeEventListener("paste", this.pasteListener);
     }
     this.removeEditor(false);
+    this.removeTabEditor(false);
   }
 
   private handleCellPointerDown(cell: CellPosition, extend: boolean): void {
@@ -265,6 +277,72 @@ export class SheetsApp {
         this.scene.markDirty();
       },
     });
+  }
+
+  private beginSheetRename(id: string): void {
+    if (this.tabEditor) return;
+    const index = this.workbook.sheets.findIndex((sheet) => sheet.id === id);
+    if (index < 0) return;
+    const sheet = this.workbook.getSheet(id);
+    const editor = new Input({
+      width: 108,
+      height: 26,
+      value: sheet.name,
+      placeholder: "Sheet name",
+      bg: "#ffffff",
+      border: "#1a73e8",
+      color: "#0f172a",
+      radius: 4,
+      padding: 6,
+    });
+    editor.setPosition(index * 120 + 4, 3);
+    editor.on("keydown", (event: { key?: string; preventDefault(): void }) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.removeTabEditor(true);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        this.removeTabEditor(false);
+      }
+    });
+    editor.on("blur", () => this.removeTabEditor(true));
+    this.tabEditor = editor;
+    this.tabs.add(editor);
+    requestAnimationFrame(() => this.scene.getA11yElement(editor.id)?.focus());
+  }
+
+  private removeTabEditor(commit: boolean): void {
+    if (!this.tabEditor) return;
+    const editor = this.tabEditor;
+    this.tabEditor = null;
+    if (commit) {
+      const index = Math.floor(editor.x / 120);
+      const sheet = this.workbook.sheets[index];
+      if (sheet) {
+        try {
+          this.workbook.renameSheet(sheet.id, editor.value);
+        } catch {
+          // Invalid rename leaves the current name intact; the next edit can retry.
+        }
+      }
+    }
+    this.tabs.remove(editor);
+    this.scene.markDirty();
+  }
+
+  private rebuildActiveSheet(): void {
+    this.scene.remove(this.grid);
+    this.viewport = new SheetViewport({
+      rows: this.model.rows,
+      cols: this.model.cols,
+      rowHeight: 24,
+      colWidth: 112,
+    });
+    this.controller = new SheetController(this.model, this.viewport);
+    this.grid = this.createGrid(this.model);
+    this.scene.add(this.grid);
+    this.resize(this.scene.width, this.scene.height);
+    this.syncFormulaBar();
   }
 
   private handleCellPointerMove(cell: CellPosition): void {

@@ -6,9 +6,16 @@ const ADD_WIDTH = 36;
 
 /** One canvas tab strip: it reads the pure workbook order and emits intentions. */
 export class SheetTabsEntity extends Entity {
+  private lastPress: { id: string; at: number } | null = null;
+
   constructor(
     private readonly workbook: Workbook,
-    private readonly events: { onSelect(id: string): void; onAdd(): void },
+    private readonly events: {
+      onSelect(id: string): void;
+      onAdd(): void;
+      onRename(id: string): void;
+      onDelete(id: string): void;
+    },
   ) {
     super();
     this.interactive = true;
@@ -16,8 +23,19 @@ export class SheetTabsEntity extends Entity {
       if (event.localX === undefined) return;
       const index = Math.floor(event.localX / TAB_WIDTH);
       const sheet = this.workbook.sheets[index];
-      if (sheet) this.events.onSelect(sheet.id);
-      else if (
+      if (sheet) {
+        const closeStart = index * TAB_WIDTH + TAB_WIDTH - 24;
+        if (event.localX >= closeStart && this.workbook.sheets.length > 1) {
+          this.events.onDelete(sheet.id);
+          return;
+        }
+        const now = performance.now();
+        const isDoublePress =
+          this.lastPress?.id === sheet.id && now - this.lastPress.at < 350;
+        this.lastPress = { id: sheet.id, at: now };
+        if (isDoublePress) this.events.onRename(sheet.id);
+        else this.events.onSelect(sheet.id);
+      } else if (
         event.localX <
         this.workbook.sheets.length * TAB_WIDTH + ADD_WIDTH
       )
@@ -71,6 +89,14 @@ export class SheetTabsEntity extends Entity {
         "600 12px Inter, sans-serif",
         active ? "#1a73e8" : "#475569",
       );
+      if (this.workbook.sheets.length > 1)
+        renderer.fillText(
+          "×",
+          x + TAB_WIDTH - 20,
+          21,
+          "14px Inter, sans-serif",
+          "#64748b",
+        );
     }
     const addX = this.workbook.sheets.length * TAB_WIDTH;
     renderer.fillText(

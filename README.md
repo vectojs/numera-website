@@ -25,7 +25,8 @@ package; this repository owns only the VectoJS UI/UX adapter.
 - Ctrl/Command+A selection of the sparse used range plus Ctrl/Command+X/C/V
   and Z/Y document shortcuts, without creating writes for blank cells;
 - ordered multi-sheet workbooks with a canvas-native tab strip, stable sheet
-  identities, and versioned local snapshot persistence with safe recovery;
+  identities, creation, rename/delete interactions, and versioned local
+  snapshot persistence with safe recovery;
 - selection formatting for background/foreground, bold/italic, horizontal
   alignment, and number/currency/percent display, with Ctrl/Command+B/I and
   transactional undo/redo.

@@ -144,3 +144,32 @@ test("switches and creates workbook sheets through the canvas tab strip", async 
     )
     .toEqual({ active: "Sheet 3", count: 3, audit: [] });
 });
+
+test("renames and deletes a sheet through the canvas tab strip", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const tabs = page.getByRole("toolbar", { name: /Workbook sheets/ });
+  const box = await tabs.boundingBox();
+  if (!box)
+    throw new Error("Workbook tab strip a11y surface is not measurable");
+
+  await page.mouse.dblclick(box.x + 120 + 16, box.y + 16);
+  const editor = page.getByRole("textbox", { name: "Sheet name" });
+  await editor.fill("Archive");
+  await editor.press("Enter");
+  await expect
+    .poll(() => page.evaluate(() => window.__app?.workbook.sheets[1].name))
+    .toBe("Archive");
+
+  await page.mouse.click(box.x + 120 + 104, box.y + 16);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        active: window.__app?.workbook.activeSheet.name,
+        count: window.__app?.workbook.sheets.length,
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ active: "Revenue", count: 1, audit: [] });
+});

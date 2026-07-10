@@ -16,3 +16,4 @@ All notable changes to this project are documented in this file.
 - Canvas-rendered cell formatting with selection-wide Ctrl/Command+B/I actions
   and format-aware undo/redo.
 - Exact-pinned core upgrade with versioned workbook JSON and CSV exchange.
+- Canvas tab rename/delete controls with temporary IME-safe editor input.
