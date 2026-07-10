@@ -21,4 +21,4 @@ body:
     id: model
     attributes:
       label: Core model impact
-      description: Identify any pure document operation that belongs in `@vectojs/sheets-core` rather than the canvas adapter.
+      description: Identify any pure document operation that belongs in `@vectojs/numera-core` rather than the canvas adapter.

@@ -1,16 +1,16 @@
 {
-  "name": "sheets-website",
+  "name": "numera-website",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vectojs/sheets-website.git"
+    "url": "git+https://github.com/vectojs/numera-website.git"
   },
   "bugs": {
-    "url": "https://github.com/vectojs/sheets-website/issues"
+    "url": "https://github.com/vectojs/numera-website/issues"
   },
-  "homepage": "https://github.com/vectojs/sheets-website#readme",
+  "homepage": "https://github.com/vectojs/numera-website#readme",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -18,13 +18,13 @@
     "test": "bun test test/*.test.ts",
     "test:e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium firefox webkit",
-    "deploy": "bash scripts/deploy-pages.sh dist sheets-website main",
+    "deploy": "bash scripts/deploy-pages.sh dist numera-website main",
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings src test"
   },
   "dependencies": {
     "@vectojs/core": "1.0.1",
-    "@vectojs/sheets-core": "0.3.0",
+    "@vectojs/numera-core": "0.3.0",
     "@vectojs/ui": "1.1.2"
   },
   "devDependencies": {

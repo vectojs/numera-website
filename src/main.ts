@@ -4,8 +4,8 @@ import {
   auditScene,
   type EventTraceEntry,
 } from "@vectojs/devtools";
-import { createDemoModel, Workbook } from "@vectojs/sheets-core";
-import { SheetsApp } from "./view/SheetsApp";
+import { createDemoModel, Workbook } from "@vectojs/numera-core";
+import { NumeraApp } from "./view/NumeraApp";
 import { measureSceneContainer } from "./view/sceneSizing";
 import { persistWorkbook, restoreWorkbook } from "./view/workbookPersistence";
 
@@ -15,17 +15,17 @@ declare global {
       scene: Scene;
       model: ReturnType<typeof createDemoModel>;
       workbook: Workbook;
-      app: SheetsApp;
+      app: NumeraApp;
       audit: () => ReturnType<typeof auditScene>;
       debugTrace?: () => readonly EventTraceEntry[];
     };
   }
 }
 
-const canvas = document.querySelector<HTMLCanvasElement>("#sheets-canvas");
-if (!canvas) throw new Error("Native Sheets requires #sheets-canvas");
-const container = document.querySelector<HTMLElement>("#sheets-root");
-if (!container) throw new Error("Native Sheets requires #sheets-root");
+const canvas = document.querySelector<HTMLCanvasElement>("#numera-canvas");
+if (!canvas) throw new Error("Numera requires #numera-canvas");
+const container = document.querySelector<HTMLElement>("#numera-root");
+if (!container) throw new Error("Numera requires #numera-root");
 
 const scene = new Scene(canvas, { disableWindowResize: true });
 scene.renderMode = "onDemand";
@@ -48,7 +48,7 @@ const createDemoWorkbook = (): Workbook => {
   return workbook;
 };
 const workbook = restoreWorkbook(window.localStorage, createDemoWorkbook);
-const app = new SheetsApp(scene, workbook);
+const app = new NumeraApp(scene, workbook);
 
 const resize = (): void => {
   const { width, height } = measureSceneContainer(container);

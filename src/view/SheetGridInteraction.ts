@@ -1,4 +1,4 @@
-import type { Rect } from "@vectojs/sheets-core";
+import type { Rect } from "@vectojs/numera-core";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 export interface SheetGridEvents {

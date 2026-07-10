@@ -12,7 +12,7 @@ import {
   toCsv,
   toWorkbookJson,
   Workbook,
-} from "@vectojs/sheets-core";
+} from "@vectojs/numera-core";
 import { SheetGridEntity } from "./SheetGridEntity";
 import { SheetTabsEntity } from "./SheetTabsEntity";
 import { SheetToolbarEntity } from "./SheetToolbarEntity";
@@ -227,7 +227,7 @@ export class SheetController {
 }
 
 /** Canvas shell, formula bar and short-lived native cell editor. */
-export class SheetsApp {
+export class NumeraApp {
   viewport: SheetViewport;
   controller: SheetController;
   grid: SheetGridEntity;

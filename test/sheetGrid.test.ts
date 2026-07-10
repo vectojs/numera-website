@@ -6,7 +6,7 @@ import {
   selectionPixelRect,
   visibleCellCount,
 } from "../src/view/SheetGridEntity";
-import { SheetModel } from "@vectojs/sheets-core";
+import { SheetModel } from "@vectojs/numera-core";
 import { SheetViewport } from "../src/view/SheetViewport";
 
 describe("visibleCellCount", () => {

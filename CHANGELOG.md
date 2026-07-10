@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Renamed the product, repository, npm dependency, runtime root, and canonical
+  deployment contract to Numera and `@vectojs/numera-core`.
+- Adopted Microsoft Excel as the primary reference for local workbook behavior
+  and personal productivity; cloud collaboration remains outside product scope.
+
 ### Fixed
 
 - Isolate Playwright on a configurable E2E port so concurrent Agent development
@@ -18,10 +25,10 @@ All notable changes to this project are documented in this file.
 - Repository `Justfile` with shared development, verification, selectable local
   browser verification, full CI browser matrix, and Cloudflare Pages deployment
   entry points.
-- Exact-pinned `@vectojs/sheets-core@0.2.0` with common numeric, logical, and
+- Exact-pinned `@vectojs/numera-core@0.2.0` with common numeric, logical, and
   error-recovery formula functions plus undoable structural operations.
 - Exact-pinned `@vectojs/devtools@0.3.0` with opt-in routing trace exposed by
-  `?debug` for deterministic Sheets interaction diagnosis.
+  `?debug` for deterministic Numera interaction diagnosis.
 - Canvas-native virtualized 10,000 × 100 grid with frozen headers and responsive scene sizing.
 - Formula model with references, ranges, aggregates, conditional logic, percent, exponentiation, and `&` concatenation.
 - Cell and range selection, IME-safe editing, formula bar, TSV copy/paste, clearing, and undo/redo history.
@@ -38,7 +45,7 @@ All notable changes to this project are documented in this file.
   structural history, formula-reference rewriting, and viewport-bound
   reconciliation. Narrow viewports keep those controls while compacting
   lower-priority export buttons.
-- Exact-pinned `@vectojs/sheets-core@0.3.0` with sparse persistent row/column
+- Exact-pinned `@vectojs/numera-core@0.3.0` with sparse persistent row/column
   metrics, structural remapping, and undoable axis-size history.
 - Canvas header-edge resize and selection fill-handle gestures with live VMT
   previews, one-transaction commits, variable-size virtualization, and

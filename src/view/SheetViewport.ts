@@ -1,4 +1,4 @@
-import { normalizeRect, type Rect } from "@vectojs/sheets-core";
+import { normalizeRect, type Rect } from "@vectojs/numera-core";
 import { AxisGeometry, type AxisMetricSource } from "./AxisGeometry";
 
 export interface CellPosition {

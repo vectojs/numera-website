@@ -1,15 +1,15 @@
-# Native Sheets
+# Numera
 
-> A canvas-native Google-Sheets-core forge built with VectoJS.
+> An Excel-oriented, canvas-native local personal spreadsheet built with VectoJS.
 
-[![CI](https://github.com/vectojs/sheets-website/actions/workflows/ci.yml/badge.svg)](https://github.com/vectojs/sheets-website/actions/workflows/ci.yml)
+[![CI](https://github.com/vectojs/numera-website/actions/workflows/ci.yml/badge.svg)](https://github.com/vectojs/numera-website/actions/workflows/ci.yml)
 [![MIT license](https://img.shields.io/badge/license-MIT-6366f1.svg)](./LICENSE)
 
-Native Sheets stress-tests VectoJS with a virtualized 10,000 × 100 spreadsheet.
+Numera stress-tests VectoJS with a virtualized 10,000 × 100 spreadsheet.
 The visible sheet is one retained canvas entity, not a DOM table: every cell
 position, hit test, selection rectangle, and scroll offset is explicit numeric
 scene state. Document semantics come from the exact-pinned published
-[`@vectojs/sheets-core`](https://www.npmjs.com/package/@vectojs/sheets-core)
+[`@vectojs/numera-core`](https://www.npmjs.com/package/@vectojs/numera-core)
 package; this repository owns only the VectoJS UI/UX adapter.
 
 ## Included core behavior
@@ -45,9 +45,11 @@ package; this repository owns only the VectoJS UI/UX adapter.
 
 - responsive container measurement and `?debug` VMT inspection/audit.
 
-This forge intentionally excludes collaboration, cloud persistence, comments,
-charts, Apps Script, and every Google Sheets function. Those are separate
-future projects, as are `sheets-cli`, `sheets-skills`, and `sheets-mcp`.
+Numera intentionally excludes collaboration, cloud persistence, accounts,
+sharing, comments, permissions, and platform scripting. Microsoft Excel is the
+primary reference for local workbook and file behavior, without claiming
+exhaustive compatibility. `numera-cli`, `numera-skills`, and `numera-mcp` are
+future independent repositories over the same pure document APIs.
 
 ## Development
 
@@ -80,9 +82,9 @@ isolated E2E port.
 
 ## Deploy
 
-The canonical application is <https://sheets-website.vectojs.org/>. Its
-Cloudflare Pages project is `sheets-website`; the fallback deployment URL is
-<https://sheets-website.pages.dev>. With an authenticated Wrangler session:
+The canonical application is <https://numera-website.vectojs.org/>. Its
+Cloudflare Pages project is `numera-website`; the fallback deployment URL is
+<https://numera-website.pages.dev>. With an authenticated Wrangler session:
 
 ```bash
 just deploy
@@ -98,7 +100,7 @@ runs the complete Chromium, Firefox, and WebKit matrix used by CI.
 
 ## Repository family
 
-This repository lives in the `vectojs-native/sheets/` forge family. The future
+This repository lives in the `vectojs-native/numera/` forge family. The future
 CLI, skills, MCP adapter, and published core document library are separate
 repositories/packages so they share the pure model layer rather than automate
 the canvas UI.

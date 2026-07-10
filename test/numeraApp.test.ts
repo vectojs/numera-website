@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { SheetModel, Workbook } from "@vectojs/sheets-core";
-import { SheetController, SheetsApp } from "../src/view/SheetsApp";
+import { SheetModel, Workbook } from "@vectojs/numera-core";
+import { SheetController, NumeraApp } from "../src/view/NumeraApp";
 import { SheetViewport } from "../src/view/SheetViewport";
 
 function createController(): {
@@ -237,7 +237,7 @@ describe("SheetController", () => {
   });
 });
 
-describe("SheetsApp", () => {
+describe("NumeraApp", () => {
   it("reflects the initially selected cell in the formula bar", () => {
     const model = new SheetModel();
     model.setCell(0, 0, "Month");
@@ -248,7 +248,7 @@ describe("SheetsApp", () => {
       resize: () => undefined,
     };
 
-    const app = new SheetsApp(scene as never, workbookWith(model));
+    const app = new NumeraApp(scene as never, workbookWith(model));
 
     expect(app.formulaBar.value).toBe("Month");
   });
@@ -268,7 +268,7 @@ describe("SheetsApp", () => {
       return 0;
     };
     try {
-      const app = new SheetsApp(scene as never, workbookWith(model));
+      const app = new NumeraApp(scene as never, workbookWith(model));
       app.resize(400, 300);
       app.grid.emit("pointerdown", { localX: 40, localY: 28 });
       app.grid.emit("pointerdown", { localX: 40, localY: 28 });
@@ -288,7 +288,7 @@ describe("SheetsApp", () => {
       remove: () => scene,
       resize: () => undefined,
     };
-    const app = new SheetsApp(scene as never, workbookWith(model));
+    const app = new NumeraApp(scene as never, workbookWith(model));
     app.resize(440, 300);
 
     app.grid.emit("pointerdown", { localX: 20, localY: 52 });

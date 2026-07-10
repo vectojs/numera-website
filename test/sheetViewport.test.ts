@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SheetAxisMetrics } from "@vectojs/sheets-core";
+import { SheetAxisMetrics } from "@vectojs/numera-core";
 import { SheetViewport } from "../src/view/SheetViewport";
 
 describe("SheetViewport", () => {

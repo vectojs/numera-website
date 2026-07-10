@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Workbook } from "@vectojs/sheets-core";
+import { Workbook } from "@vectojs/numera-core";
 import {
   persistWorkbook,
   restoreWorkbook,

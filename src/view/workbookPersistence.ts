@@ -1,6 +1,6 @@
-import { Workbook, type WorkbookSnapshot } from "@vectojs/sheets-core";
+import { Workbook, type WorkbookSnapshot } from "@vectojs/numera-core";
 
-export const WORKBOOK_STORAGE_KEY = "vectojs-sheets:workbook:v1";
+export const WORKBOOK_STORAGE_KEY = "vectojs-numera:workbook:v1";
 
 export interface StorageLike {
   getItem(key: string): string | null;

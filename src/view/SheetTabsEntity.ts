@@ -1,5 +1,5 @@
 import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
-import { Workbook } from "@vectojs/sheets-core";
+import { Workbook } from "@vectojs/numera-core";
 
 const TAB_WIDTH = 120;
 const ADD_WIDTH = 36;

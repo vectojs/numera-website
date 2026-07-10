@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible Native Sheets interaction or rendering defect.
+description: Report a reproducible Numera interaction or rendering defect.
 title: "bug: "
 labels: ["bug"]
 body:

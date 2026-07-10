@@ -1,5 +1,5 @@
 import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
-import { colName, SheetModel } from "@vectojs/sheets-core";
+import { colName, SheetModel } from "@vectojs/numera-core";
 import { measureText } from "@vectojs/ui";
 import {
   fillHandleRect,
