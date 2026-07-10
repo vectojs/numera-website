@@ -15,7 +15,7 @@ fi
 
 workspace_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)
 mkdir -p "$workspace_root/tmp"
-log_file=$(mktemp "$workspace_root/tmp/sheets-pages-deploy.XXXXXX.log")
+log_file=$(mktemp "$workspace_root/tmp/numera-pages-deploy.XXXXXX.log")
 wrangler_pid=""
 
 cleanup() {
