@@ -335,6 +335,9 @@ export class SheetsApp {
         }
       }
     }
+    // Input owns a projected native control. Remove that projection before the
+    // canvas entity so no stale control can intercept a later tab pointer event.
+    this.scene.detachA11y(editor);
     this.tabs.remove(editor);
     this.scene.markDirty();
   }

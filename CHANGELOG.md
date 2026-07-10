@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Removed the projected sheet-name input when its temporary canvas entity is
+  dismissed, preventing it from intercepting later tab actions in WebKit.
+
 ### Added
 
 - Canvas-native virtualized 10,000 × 100 grid with frozen headers and responsive scene sizing.
