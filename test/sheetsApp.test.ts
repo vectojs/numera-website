@@ -182,7 +182,9 @@ describe("SheetController", () => {
       rows: model.rows,
       cols: model.cols,
       rowHeight: 24,
-      colWidth: 100,
+      colWidth: 112,
+      rowMetrics: model.rowMetrics,
+      columnMetrics: model.columnMetrics,
     });
     const controller = new SheetController(model, viewport);
 
@@ -190,6 +192,48 @@ describe("SheetController", () => {
     expect(controller.deleteColumns()).toBe(false);
     expect(model.rows).toBe(1);
     expect(model.cols).toBe(1);
+  });
+
+  it("resizes axes through Core history and refreshes viewport geometry", () => {
+    const { model, controller } = createController();
+
+    controller.resizeRow(2, 40);
+    controller.resizeColumn(1, 160);
+    expect(model.getAxisSize("row", 2)).toBe(40);
+    expect(model.getAxisSize("column", 1)).toBe(160);
+    expect(controller.viewport.cellRect({ row: 3, col: 2 })).toEqual({
+      x: 312,
+      y: 116,
+      width: 112,
+      height: 24,
+    });
+
+    controller.undo();
+    expect(model.getAxisSize("column", 1)).toBe(112);
+    expect(model.getAxisSize("row", 2)).toBe(40);
+    controller.undo();
+    expect(model.getAxisSize("row", 2)).toBe(24);
+    controller.redo();
+    controller.redo();
+    expect(model.getAxisSize("row", 2)).toBe(40);
+  });
+
+  it("fills a target rectangle by repeating selected raw cells as one transaction", () => {
+    const { model, controller } = createController();
+    model.setCell(0, 0, "first");
+    model.setCell(0, 1, '=A1&"!"');
+    controller.select({ row: 0, col: 0 });
+    controller.extendSelection({ row: 0, col: 1 });
+
+    controller.fillSelection({ r1: 1, c1: 0, r2: 2, c2: 3 });
+    expect(model.getRaw(1, 0)).toBe("first");
+    expect(model.getRaw(1, 1)).toBe('=A1&"!"');
+    expect(model.getRaw(2, 2)).toBe("first");
+    expect(model.getRaw(2, 3)).toBe('=A1&"!"');
+
+    controller.undo();
+    expect(model.getRaw(1, 0)).toBe("");
+    expect(model.getRaw(2, 3)).toBe("");
   });
 });
 

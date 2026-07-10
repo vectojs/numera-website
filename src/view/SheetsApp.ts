@@ -8,6 +8,7 @@ import {
   SheetHistory,
   SheetModel,
   type SheetStructureOperation,
+  type Rect,
   toCsv,
   toWorkbookJson,
   Workbook,
@@ -99,12 +100,12 @@ export class SheetController {
 
   undo(): void {
     this.history.undo();
-    this.viewport.setBounds(this.model.rows, this.model.cols);
+    this.syncViewportMetrics();
   }
 
   redo(): void {
     this.history.redo();
-    this.viewport.setBounds(this.model.rows, this.model.cols);
+    this.syncViewportMetrics();
   }
 
   copySelection(): string {
@@ -175,9 +176,40 @@ export class SheetController {
     });
   }
 
+  resizeRow(index: number, size: number): void {
+    this.history.applyAxisSizes([{ axis: "row", index, size }]);
+    this.syncViewportMetrics();
+  }
+
+  resizeColumn(index: number, size: number): void {
+    this.history.applyAxisSizes([{ axis: "column", index, size }]);
+    this.syncViewportMetrics();
+  }
+
+  /** Repeat source raw cells into a bounded target as one history entry. */
+  fillSelection(target: Rect): void {
+    const source = this.viewport.selectionRange();
+    const sourceRows = source.r2 - source.r1 + 1;
+    const sourceColumns = source.c2 - source.c1 + 1;
+    const writes = [];
+    for (let row = target.r1; row <= target.r2; row++) {
+      for (let col = target.c1; col <= target.c2; col++) {
+        writes.push({
+          row,
+          col,
+          raw: this.model.getRaw(
+            source.r1 + ((row - target.r1) % sourceRows),
+            source.c1 + ((col - target.c1) % sourceColumns),
+          ),
+        });
+      }
+    }
+    this.history.apply(writes);
+  }
+
   private applyStructure(operation: SheetStructureOperation): boolean {
     this.history.applyStructure(operation);
-    this.viewport.setBounds(this.model.rows, this.model.cols);
+    this.syncViewportMetrics();
     const selected = this.viewport.selected;
     this.viewport.select({
       row: operation.axis === "row" ? operation.index : selected.row,
@@ -185,6 +217,10 @@ export class SheetController {
     });
     this.viewport.ensureVisible(this.viewport.selected);
     return true;
+  }
+
+  private syncViewportMetrics(): void {
+    this.viewport.setMetrics(this.model.rowMetrics, this.model.columnMetrics);
   }
 }
 
@@ -215,6 +251,8 @@ export class SheetsApp {
       cols: model.cols,
       rowHeight: 24,
       colWidth: 112,
+      rowMetrics: model.rowMetrics,
+      columnMetrics: model.columnMetrics,
     });
     this.controller = new SheetController(model, this.viewport);
     this.grid = this.createGrid(model);
@@ -293,6 +331,8 @@ export class SheetsApp {
       cols: this.model.cols,
       rowHeight: 24,
       colWidth: 112,
+      rowMetrics: this.model.rowMetrics,
+      columnMetrics: this.model.columnMetrics,
     });
     this.controller = new SheetController(this.model, this.viewport);
     this.grid = this.createGrid(this.model);
@@ -414,6 +454,8 @@ export class SheetsApp {
       cols: this.model.cols,
       rowHeight: 24,
       colWidth: 112,
+      rowMetrics: this.model.rowMetrics,
+      columnMetrics: this.model.columnMetrics,
     });
     this.controller = new SheetController(this.model, this.viewport);
     this.grid = this.createGrid(this.model);
