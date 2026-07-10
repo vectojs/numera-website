@@ -1,6 +1,7 @@
 import { Scene } from "@vectojs/core";
 import { Input } from "@vectojs/ui";
 import {
+  type CellFormat,
   copyRange,
   pasteText,
   SheetHistory,
@@ -110,6 +111,16 @@ export class SheetController {
       .getCellsInRange(range)
       .map(({ row, col }) => ({ row, col, raw: "" }));
     this.history.apply(writes);
+  }
+
+  applyFormat(format: CellFormat): void {
+    const range = this.viewport.selectionRange();
+    const writes = [];
+    for (let row = range.r1; row <= range.r2; row++) {
+      for (let col = range.c1; col <= range.c2; col++)
+        writes.push({ row, col, format });
+    }
+    this.history.applyFormats(writes);
   }
 }
 
@@ -284,6 +295,23 @@ export class SheetsApp {
       event.preventDefault();
       this.controller.redo();
       this.syncFormulaBar();
+      this.scene.markDirty();
+      return;
+    }
+    if (
+      modifier &&
+      (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "i")
+    ) {
+      event.preventDefault();
+      const current = this.model.getFormat(
+        this.viewport.selected.row,
+        this.viewport.selected.col,
+      );
+      this.controller.applyFormat(
+        event.key.toLowerCase() === "b"
+          ? { bold: !current.bold }
+          : { italic: !current.italic },
+      );
       this.scene.markDirty();
       return;
     }

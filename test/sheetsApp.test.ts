@@ -137,6 +137,20 @@ describe("SheetController", () => {
     controller.pageSelection(1);
     expect(controller.viewport.selected).toEqual({ row: 5, col: 0 });
   });
+
+  it("applies a style to the selection as an undoable transaction", () => {
+    const { model, controller } = createController();
+    controller.select({ row: 0, col: 0 });
+    controller.extendSelection({ row: 0, col: 1 });
+
+    controller.applyFormat({ bold: true, background: "#fef3c7" });
+    expect(model.getFormat(0, 1)).toEqual({
+      bold: true,
+      background: "#fef3c7",
+    });
+    controller.undo();
+    expect(model.hasFormat(0, 0)).toBe(false);
+  });
 });
 
 describe("SheetsApp", () => {

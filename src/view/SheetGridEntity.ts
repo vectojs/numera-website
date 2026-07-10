@@ -1,5 +1,6 @@
 import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
 import { colName, SheetModel } from "@vectojs/sheets-core";
+import { measureText } from "@vectojs/ui";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 export interface SheetGridEvents {
@@ -137,15 +138,27 @@ export class SheetGridEntity extends Entity {
       const y = columnHeaderHeight + row * rowHeight - scrollY;
       for (let col = range.colStart; col <= range.colEnd; col++) {
         const x = rowHeaderWidth + col * colWidth - scrollX;
+        const format = this.model.getFormat(row, col);
+        if (format.background)
+          drawRect(renderer, x, y, colWidth, rowHeight, format.background);
         const display = this.model.getDisplay(row, col);
-        if (display)
+        if (display) {
+          const font = `${format.italic ? "italic " : ""}${format.bold ? "700 " : ""}13px Inter, sans-serif`;
+          const textWidth = measureText(display, font);
+          const textX =
+            format.horizontalAlign === "right"
+              ? x + colWidth - textWidth - 6
+              : format.horizontalAlign === "center"
+                ? x + (colWidth - textWidth) / 2
+                : x + 6;
           renderer.fillText(
             display,
-            x + 6,
+            textX,
             y + 16,
-            "13px Inter, sans-serif",
-            "#1f2937",
+            font,
+            format.foreground ?? "#1f2937",
           );
+        }
       }
     }
     drawGridLines(

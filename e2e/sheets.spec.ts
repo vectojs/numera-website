@@ -95,6 +95,17 @@ test("drags a canvas range and applies spreadsheet navigation shortcuts", async 
       })),
     )
     .toEqual({ active: { row: 9999, col: 99 }, audit: [] });
+
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Control+b");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        format: window.__app?.model.getFormat(0, 0),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ format: { bold: true }, audit: [] });
 });
 
 test("switches and creates workbook sheets through the canvas tab strip", async ({

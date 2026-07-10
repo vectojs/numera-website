@@ -26,6 +26,9 @@ package; this repository owns only the VectoJS UI/UX adapter.
   and Z/Y document shortcuts, without creating writes for blank cells;
 - ordered multi-sheet workbooks with a canvas-native tab strip, stable sheet
   identities, and versioned local snapshot persistence with safe recovery;
+- selection formatting for background/foreground, bold/italic, horizontal
+  alignment, and number/currency/percent display, with Ctrl/Command+B/I and
+  transactional undo/redo.
 - responsive container measurement and `?debug` VMT inspection/audit.
 
 This forge intentionally excludes collaboration, cloud persistence, comments,

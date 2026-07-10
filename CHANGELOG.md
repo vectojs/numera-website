@@ -13,3 +13,5 @@ All notable changes to this project are documented in this file.
 - Pointer-captured canvas drag selection; Home/End, Ctrl/Command+Home/End and
   PageUp/PageDown navigation; used-range selection and cut support.
 - Workbook tabs, sheet creation, and local versioned snapshot restoration.
+- Canvas-rendered cell formatting with selection-wide Ctrl/Command+B/I actions
+  and format-aware undo/redo.
