@@ -198,13 +198,15 @@ export class SheetController {
           row,
           col,
           raw: this.model.getRaw(
-            source.r1 + ((row - target.r1) % sourceRows),
-            source.c1 + ((col - target.c1) % sourceColumns),
+            source.r1 + modulo(row - source.r1, sourceRows),
+            source.c1 + modulo(col - source.c1, sourceColumns),
           ),
         });
       }
     }
     this.history.apply(writes);
+    this.viewport.select({ row: target.r1, col: target.c1 });
+    this.viewport.extendSelection({ row: target.r2, col: target.c2 });
   }
 
   private applyStructure(operation: SheetStructureOperation): boolean {
@@ -390,6 +392,17 @@ export class SheetsApp {
         this.controller.scroll(x, y);
         this.scene.markDirty();
       },
+      onAxisResize: (axis, index, size) => {
+        if (axis === "row") this.controller.resizeRow(index, size);
+        else this.controller.resizeColumn(index, size);
+        this.scene.markDirty();
+      },
+      onFill: (target) => {
+        this.controller.fillSelection(target);
+        this.syncFormulaBar();
+        this.scene.markDirty();
+      },
+      onGestureChange: () => this.scene.markDirty(),
     });
   }
 
@@ -708,4 +721,8 @@ function isNativeTextTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
   );
+}
+
+function modulo(value: number, divisor: number): number {
+  return ((value % divisor) + divisor) % divisor;
 }

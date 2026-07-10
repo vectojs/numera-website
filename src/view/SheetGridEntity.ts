@@ -1,5 +1,5 @@
 import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
-import { colName, SheetModel } from "@vectojs/sheets-core";
+import { colName, SheetModel, type Rect } from "@vectojs/sheets-core";
 import { measureText } from "@vectojs/ui";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
@@ -8,7 +8,20 @@ export interface SheetGridEvents {
   onCellPointerMove?: (cell: CellPosition) => void;
   onCellPointerUp?: () => void;
   onScroll?: (deltaX: number, deltaY: number) => void;
+  onAxisResize?: (axis: "row" | "column", index: number, size: number) => void;
+  onFill?: (target: Rect) => void;
+  onGestureChange?: () => void;
 }
+
+export interface AxisResizeTarget {
+  axis: "row" | "column";
+  index: number;
+  size: number;
+}
+
+const FILL_HANDLE_SIZE = 8;
+const MIN_ROW_SIZE = 12;
+const MIN_COLUMN_SIZE = 32;
 
 /** Number of cells that the current grid frame will inspect and render. */
 export function visibleCellCount(viewport: SheetViewport): number {
@@ -26,7 +39,13 @@ export function selectionPixelRect(viewport: SheetViewport): {
   width: number;
   height: number;
 } {
-  const range = viewport.selectionRange();
+  return rangePixelRect(viewport, viewport.selectionRange());
+}
+
+function rangePixelRect(
+  viewport: SheetViewport,
+  range: Rect,
+): { x: number; y: number; width: number; height: number } {
   const topLeft = viewport.cellRect({ row: range.r1, col: range.c1 });
   const bottomRight = viewport.cellRect({ row: range.r2, col: range.c2 });
   return {
@@ -37,6 +56,65 @@ export function selectionPixelRect(viewport: SheetViewport): {
   };
 }
 
+export function fillHandleRect(viewport: SheetViewport): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const selection = selectionPixelRect(viewport);
+  return {
+    x: selection.x + selection.width - FILL_HANDLE_SIZE / 2,
+    y: selection.y + selection.height - FILL_HANDLE_SIZE / 2,
+    width: FILL_HANDLE_SIZE,
+    height: FILL_HANDLE_SIZE,
+  };
+}
+
+/** Resolve header-edge hit zones from the same variable geometry used to draw them. */
+export function headerResizeTargetAt(
+  viewport: SheetViewport,
+  localX: number,
+  localY: number,
+  tolerance = 5,
+): AxisResizeTarget | null {
+  if (
+    localX >= 0 &&
+    localX < viewport.rowHeaderWidth &&
+    localY >= viewport.columnHeaderHeight
+  ) {
+    const cell = viewport.cellAt(viewport.rowHeaderWidth, localY);
+    if (!cell) return null;
+    const rect = viewport.cellRect(cell);
+    if (Math.abs(localY - rect.y) <= tolerance && cell.row > 0)
+      return {
+        axis: "row",
+        index: cell.row - 1,
+        size: viewport.rowSizeAt(cell.row - 1),
+      };
+    if (Math.abs(localY - (rect.y + rect.height)) <= tolerance)
+      return { axis: "row", index: cell.row, size: rect.height };
+  }
+  if (
+    localY >= 0 &&
+    localY < viewport.columnHeaderHeight &&
+    localX >= viewport.rowHeaderWidth
+  ) {
+    const cell = viewport.cellAt(localX, viewport.columnHeaderHeight);
+    if (!cell) return null;
+    const rect = viewport.cellRect(cell);
+    if (Math.abs(localX - rect.x) <= tolerance && cell.col > 0)
+      return {
+        axis: "column",
+        index: cell.col - 1,
+        size: viewport.columnSizeAt(cell.col - 1),
+      };
+    if (Math.abs(localX - (rect.x + rect.width)) <= tolerance)
+      return { axis: "column", index: cell.col, size: rect.width };
+  }
+  return null;
+}
+
 /**
  * A single canvas entity for the sheet surface. It renders only the rows and
  * columns intersecting the viewport; the 10,000 by 100 document never becomes
@@ -44,6 +122,10 @@ export function selectionPixelRect(viewport: SheetViewport): {
  */
 export class SheetGridEntity extends Entity {
   private pointerDragging = false;
+  private resizeDrag:
+    (AxisResizeTarget & { startCoordinate: number; nextSize: number }) | null =
+    null;
+  private fillDrag: { target: Rect } | null = null;
 
   constructor(
     readonly model: SheetModel,
@@ -56,6 +138,28 @@ export class SheetGridEntity extends Entity {
       "pointerdown",
       (event: { localX?: number; localY?: number; shiftKey?: boolean }) => {
         if (event.localX === undefined || event.localY === undefined) return;
+        const resize = headerResizeTargetAt(
+          this.viewport,
+          event.localX,
+          event.localY,
+        );
+        if (resize) {
+          this.resizeDrag = {
+            ...resize,
+            startCoordinate:
+              resize.axis === "row" ? event.localY : event.localX,
+            nextSize: resize.size,
+          };
+          this.events.onGestureChange?.();
+          return;
+        }
+        if (
+          pointInRect(event.localX, event.localY, fillHandleRect(this.viewport))
+        ) {
+          this.fillDrag = { target: this.viewport.selectionRange() };
+          this.events.onGestureChange?.();
+          return;
+        }
         const cell = this.viewport.cellAt(event.localX, event.localY);
         if (!cell) return;
         this.pointerDragging = true;
@@ -63,6 +167,27 @@ export class SheetGridEntity extends Entity {
       },
     );
     this.on("pointermove", (event: { localX?: number; localY?: number }) => {
+      if (event.localX === undefined || event.localY === undefined) return;
+      if (this.resizeDrag) {
+        const coordinate =
+          this.resizeDrag.axis === "row" ? event.localY : event.localX;
+        const minimum =
+          this.resizeDrag.axis === "row" ? MIN_ROW_SIZE : MIN_COLUMN_SIZE;
+        this.resizeDrag.nextSize = Math.max(
+          minimum,
+          Math.round(
+            this.resizeDrag.size + coordinate - this.resizeDrag.startCoordinate,
+          ),
+        );
+        this.events.onGestureChange?.();
+        return;
+      }
+      if (this.fillDrag) {
+        const cell = this.viewport.cellAt(event.localX, event.localY);
+        if (cell) this.fillDrag.target = fillTargetRange(this.viewport, cell);
+        this.events.onGestureChange?.();
+        return;
+      }
       if (
         !this.pointerDragging ||
         event.localX === undefined ||
@@ -73,6 +198,20 @@ export class SheetGridEntity extends Entity {
       if (cell) this.events.onCellPointerMove?.(cell);
     });
     this.on("pointerup", () => {
+      if (this.resizeDrag) {
+        const drag = this.resizeDrag;
+        this.resizeDrag = null;
+        this.events.onAxisResize?.(drag.axis, drag.index, drag.nextSize);
+        this.events.onGestureChange?.();
+        return;
+      }
+      if (this.fillDrag) {
+        const drag = this.fillDrag;
+        this.fillDrag = null;
+        this.events.onFill?.(drag.target);
+        this.events.onGestureChange?.();
+        return;
+      }
       if (!this.pointerDragging) return;
       this.pointerDragging = false;
       this.events.onCellPointerUp?.();
@@ -180,6 +319,29 @@ export class SheetGridEntity extends Entity {
       0,
     );
     renderer.stroke("#1a73e8", 2);
+    if (this.fillDrag) {
+      const target = rangePixelRect(this.viewport, this.fillDrag.target);
+      drawRect(
+        renderer,
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        "rgba(26, 115, 232, 0.08)",
+      );
+      renderer.beginPath();
+      renderer.roundRect(target.x, target.y, target.width, target.height, 0);
+      renderer.stroke("#1a73e8", 1);
+    }
+    const handle = fillHandleRect(this.viewport);
+    drawRect(
+      renderer,
+      handle.x,
+      handle.y,
+      handle.width,
+      handle.height,
+      "#1a73e8",
+    );
     const selected = this.viewport.cellRect(this.viewport.selected);
     renderer.beginPath();
     renderer.roundRect(
@@ -191,6 +353,25 @@ export class SheetGridEntity extends Entity {
     );
     renderer.stroke("#1a73e8", 2);
     renderer.restore();
+
+    if (this.resizeDrag) {
+      const cell =
+        this.resizeDrag.axis === "row"
+          ? { row: this.resizeDrag.index, col: range.colStart }
+          : { row: range.rowStart, col: this.resizeDrag.index };
+      const rect = this.viewport.cellRect(cell);
+      renderer.beginPath();
+      if (this.resizeDrag.axis === "row") {
+        const y = rect.y + this.resizeDrag.nextSize;
+        renderer.moveTo(0, y);
+        renderer.lineTo(this.width, y);
+      } else {
+        const x = rect.x + this.resizeDrag.nextSize;
+        renderer.moveTo(x, 0);
+        renderer.lineTo(x, this.height);
+      }
+      renderer.stroke("#1a73e8", 2);
+    }
 
     drawRect(renderer, 0, 0, rowHeaderWidth, columnHeaderHeight, "#f8fafc");
     drawRect(
@@ -238,6 +419,44 @@ export class SheetGridEntity extends Entity {
     renderer.lineTo(this.width, columnHeaderHeight);
     renderer.stroke("#cbd5e1", 1);
   }
+}
+
+function fillTargetRange(viewport: SheetViewport, cell: CellPosition): Rect {
+  const source = viewport.selectionRange();
+  const rowDistance =
+    cell.row < source.r1
+      ? source.r1 - cell.row
+      : Math.max(0, cell.row - source.r2);
+  const columnDistance =
+    cell.col < source.c1
+      ? source.c1 - cell.col
+      : Math.max(0, cell.col - source.c2);
+  if (rowDistance >= columnDistance)
+    return {
+      r1: Math.min(source.r1, cell.row),
+      c1: source.c1,
+      r2: Math.max(source.r2, cell.row),
+      c2: source.c2,
+    };
+  return {
+    r1: source.r1,
+    c1: Math.min(source.c1, cell.col),
+    r2: source.r2,
+    c2: Math.max(source.c2, cell.col),
+  };
+}
+
+function pointInRect(
+  x: number,
+  y: number,
+  rect: { x: number; y: number; width: number; height: number },
+): boolean {
+  return (
+    x >= rect.x &&
+    x <= rect.x + rect.width &&
+    y >= rect.y &&
+    y <= rect.y + rect.height
+  );
 }
 
 function drawRect(

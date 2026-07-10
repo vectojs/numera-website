@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
+  fillHandleRect,
+  headerResizeTargetAt,
   SheetGridEntity,
   selectionPixelRect,
   visibleCellCount,
@@ -41,6 +43,33 @@ describe("selectionPixelRect", () => {
       height: 72,
     });
   });
+
+  it("derives resize edges and a fill handle from viewport numbers", () => {
+    const view = new SheetViewport({
+      rows: 20,
+      cols: 10,
+      rowHeight: 24,
+      colWidth: 100,
+    });
+    view.resize(440, 220);
+
+    expect(headerResizeTargetAt(view, 20, 52)).toEqual({
+      axis: "row",
+      index: 0,
+      size: 24,
+    });
+    expect(headerResizeTargetAt(view, 140, 12)).toEqual({
+      axis: "column",
+      index: 0,
+      size: 100,
+    });
+    expect(fillHandleRect(view)).toEqual({
+      x: 136,
+      y: 48,
+      width: 8,
+      height: 8,
+    });
+  });
 });
 
 describe("SheetGridEntity pointer selection", () => {
@@ -65,5 +94,31 @@ describe("SheetGridEntity pointer selection", () => {
     grid.emit("pointerup", {});
 
     expect(events).toEqual(["down:0:0:false", "move:2:2", "up"]);
+  });
+
+  it("routes header resize and fill-handle drags as numeric intents", () => {
+    const view = new SheetViewport({
+      rows: 20,
+      cols: 10,
+      rowHeight: 24,
+      colWidth: 100,
+    });
+    view.resize(440, 220);
+    const events: string[] = [];
+    const grid = new SheetGridEntity(new SheetModel(20, 10), view, {
+      onAxisResize: (axis, index, size) =>
+        events.push(`resize:${axis}:${index}:${size}`),
+      onFill: (target) =>
+        events.push(`fill:${target.r1}:${target.c1}:${target.r2}:${target.c2}`),
+    });
+
+    grid.emit("pointerdown", { localX: 20, localY: 52 });
+    grid.emit("pointermove", { localX: 20, localY: 68 });
+    grid.emit("pointerup", {});
+    grid.emit("pointerdown", { localX: 140, localY: 52 });
+    grid.emit("pointermove", { localX: 140, localY: 92 });
+    grid.emit("pointerup", {});
+
+    expect(events).toEqual(["resize:row:0:40", "fill:0:0:2:0"]);
   });
 });

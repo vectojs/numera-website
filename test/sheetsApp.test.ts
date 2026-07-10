@@ -278,4 +278,37 @@ describe("SheetsApp", () => {
       globalThis.requestAnimationFrame = originalFrame;
     }
   });
+
+  it("connects Canvas resize and fill gestures to document transactions", () => {
+    const model = new SheetModel(20, 10);
+    model.setCell(0, 0, "seed");
+    const scene = {
+      add: () => scene,
+      markDirty: () => undefined,
+      remove: () => scene,
+      resize: () => undefined,
+    };
+    const app = new SheetsApp(scene as never, workbookWith(model));
+    app.resize(440, 300);
+
+    app.grid.emit("pointerdown", { localX: 20, localY: 52 });
+    app.grid.emit("pointermove", { localX: 20, localY: 68 });
+    app.grid.emit("pointerup", {});
+    expect(app.model.getAxisSize("row", 0)).toBe(40);
+
+    const handle = app.viewport.cellRect({ row: 0, col: 0 });
+    app.grid.emit("pointerdown", {
+      localX: handle.x + handle.width,
+      localY: handle.y + handle.height,
+    });
+    app.grid.emit("pointermove", { localX: 80, localY: 116 });
+    app.grid.emit("pointerup", {});
+    expect(app.model.getRaw(3, 0)).toBe("seed");
+    expect(app.viewport.selectionRange()).toEqual({
+      r1: 0,
+      c1: 0,
+      r2: 3,
+      c2: 0,
+    });
+  });
 });
