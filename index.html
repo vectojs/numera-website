@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Native Sheets — a VectoJS forge</title>
+    <meta
+      name="description"
+      content="A Google-Sheets-core clone rendered entirely on one canvas by VectoJS: a virtualized 10,000×100 grid with selection, editing, and formulas — zero DOM cells."
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #f8fafc;
+      }
+
+      #sheets-root {
+        width: 100%;
+        height: 100%;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="sheets-root" aria-label="Native Sheets application">
+      <canvas id="sheets-canvas"></canvas>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
