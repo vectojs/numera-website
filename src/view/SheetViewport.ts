@@ -1,3 +1,6 @@
+import { normalizeRect, type Rect } from "@vectojs/sheets-core";
+import { AxisGeometry, type AxisMetricSource } from "./AxisGeometry";
+
 export interface CellPosition {
   row: number;
   col: number;
@@ -15,6 +18,8 @@ export interface SheetViewportOptions {
   cols: number;
   rowHeight: number;
   colWidth: number;
+  rowMetrics?: AxisMetricSource;
+  columnMetrics?: AxisMetricSource;
   rowHeaderWidth?: number;
   columnHeaderHeight?: number;
 }
@@ -38,6 +43,10 @@ export class SheetViewport {
   scrollY = 0;
   selected: CellPosition = { row: 0, col: 0 };
   private anchor: CellPosition = { row: 0, col: 0 };
+  private rowMetrics: AxisMetricSource;
+  private columnMetrics: AxisMetricSource;
+  private rowGeometry: AxisGeometry;
+  private columnGeometry: AxisGeometry;
 
   constructor(options: SheetViewportOptions) {
     this.rows = options.rows;
@@ -46,6 +55,12 @@ export class SheetViewport {
     this.colWidth = options.colWidth;
     this.rowHeaderWidth = options.rowHeaderWidth ?? 40;
     this.columnHeaderHeight = options.columnHeaderHeight ?? 28;
+    this.rowMetrics =
+      options.rowMetrics ?? uniformAxis(options.rows, options.rowHeight);
+    this.columnMetrics =
+      options.columnMetrics ?? uniformAxis(options.cols, options.colWidth);
+    this.rowGeometry = new AxisGeometry(this.rowMetrics);
+    this.columnGeometry = new AxisGeometry(this.columnMetrics);
   }
 
   resize(width: number, height: number): void {
@@ -62,9 +77,37 @@ export class SheetViewport {
   setBounds(rows: number, cols: number): void {
     this.rows = Math.max(1, Math.floor(rows));
     this.cols = Math.max(1, Math.floor(cols));
+    if (this.rowMetrics.axisLength !== this.rows) {
+      this.rowMetrics = uniformAxis(this.rows, this.rowHeight);
+      this.rowGeometry = new AxisGeometry(this.rowMetrics);
+    }
+    if (this.columnMetrics.axisLength !== this.cols) {
+      this.columnMetrics = uniformAxis(this.cols, this.colWidth);
+      this.columnGeometry = new AxisGeometry(this.columnMetrics);
+    }
     this.selected = this.clampPosition(this.selected);
     this.anchor = this.clampPosition(this.anchor);
     this.scrollTo(this.scrollX, this.scrollY);
+  }
+
+  /** Rebuild sparse geometry after Core swaps metric snapshots or sheet bounds. */
+  setMetrics(
+    rowMetrics: AxisMetricSource,
+    columnMetrics: AxisMetricSource,
+  ): void {
+    this.rowMetrics = rowMetrics;
+    this.columnMetrics = columnMetrics;
+    this.rowGeometry = new AxisGeometry(rowMetrics);
+    this.columnGeometry = new AxisGeometry(columnMetrics);
+    this.setBounds(rowMetrics.axisLength, columnMetrics.axisLength);
+  }
+
+  rowSizeAt(row: number): number {
+    return this.rowGeometry.sizeAt(row);
+  }
+
+  columnSizeAt(column: number): number {
+    return this.columnGeometry.sizeAt(column);
   }
 
   scrollBy(deltaX: number, deltaY: number): void {
@@ -105,10 +148,10 @@ export class SheetViewport {
       row: clamp(position.row, 0, this.rows - 1),
       col: clamp(position.col, 0, this.cols - 1),
     };
-    const left = cell.col * this.colWidth;
-    const right = left + this.colWidth;
-    const top = cell.row * this.rowHeight;
-    const bottom = top + this.rowHeight;
+    const left = this.columnGeometry.offsetOf(cell.col);
+    const right = left + this.columnGeometry.sizeAt(cell.col);
+    const top = this.rowGeometry.offsetOf(cell.row);
+    const bottom = top + this.rowGeometry.sizeAt(cell.row);
     let nextX = this.scrollX;
     let nextY = this.scrollY;
     if (left < nextX) nextX = left;
@@ -126,33 +169,28 @@ export class SheetViewport {
       return { rowStart: 0, rowEnd: -1, colStart: 0, colEnd: -1 };
     }
     return {
-      rowStart: Math.floor(this.scrollY / this.rowHeight),
-      rowEnd: Math.min(
-        this.rows - 1,
-        Math.floor((this.scrollY + bodyHeight - 1) / this.rowHeight),
-      ),
-      colStart: Math.floor(this.scrollX / this.colWidth),
-      colEnd: Math.min(
-        this.cols - 1,
-        Math.floor((this.scrollX + bodyWidth - 1) / this.colWidth),
-      ),
+      rowStart: this.rowGeometry.indexAt(this.scrollY),
+      rowEnd: this.rowGeometry.indexAt(this.scrollY + bodyHeight - 1),
+      colStart: this.columnGeometry.indexAt(this.scrollX),
+      colEnd: this.columnGeometry.indexAt(this.scrollX + bodyWidth - 1),
     };
   }
 
   /** Number of complete rows exposed by the current canvas body. */
   pageRows(): number {
-    return Math.max(1, Math.floor(this.bodyHeight() / this.rowHeight));
+    const range = this.visibleRange();
+    return Math.max(1, range.rowEnd - range.rowStart + 1);
   }
 
   cellAt(localX: number, localY: number): CellPosition | null {
     if (localX < this.rowHeaderWidth || localY < this.columnHeaderHeight)
       return null;
     if (localX >= this.width || localY >= this.height) return null;
-    const col = Math.floor(
-      (localX - this.rowHeaderWidth + this.scrollX) / this.colWidth,
+    const col = this.columnGeometry.indexAt(
+      localX - this.rowHeaderWidth + this.scrollX,
     );
-    const row = Math.floor(
-      (localY - this.columnHeaderHeight + this.scrollY) / this.rowHeight,
+    const row = this.rowGeometry.indexAt(
+      localY - this.columnHeaderHeight + this.scrollY,
     );
     return row >= 0 && row < this.rows && col >= 0 && col < this.cols
       ? { row, col }
@@ -166,10 +204,16 @@ export class SheetViewport {
     height: number;
   } {
     return {
-      x: this.rowHeaderWidth + position.col * this.colWidth - this.scrollX,
-      y: this.columnHeaderHeight + position.row * this.rowHeight - this.scrollY,
-      width: this.colWidth,
-      height: this.rowHeight,
+      x:
+        this.rowHeaderWidth +
+        this.columnGeometry.offsetOf(position.col) -
+        this.scrollX,
+      y:
+        this.columnHeaderHeight +
+        this.rowGeometry.offsetOf(position.row) -
+        this.scrollY,
+      width: this.columnGeometry.sizeAt(position.col),
+      height: this.rowGeometry.sizeAt(position.row),
     };
   }
 
@@ -182,11 +226,11 @@ export class SheetViewport {
   }
 
   private maxScrollX(): number {
-    return Math.max(0, this.cols * this.colWidth - this.bodyWidth());
+    return Math.max(0, this.columnGeometry.totalSize - this.bodyWidth());
   }
 
   private maxScrollY(): number {
-    return Math.max(0, this.rows * this.rowHeight - this.bodyHeight());
+    return Math.max(0, this.rowGeometry.totalSize - this.bodyHeight());
   }
 
   private clampPosition(position: CellPosition): CellPosition {
@@ -197,7 +241,15 @@ export class SheetViewport {
   }
 }
 
+function uniformAxis(length: number, size: number): AxisMetricSource {
+  return {
+    axisLength: length,
+    default: size,
+    get: () => size,
+    entries: () => [],
+  };
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
-import { normalizeRect, type Rect } from "@vectojs/sheets-core";

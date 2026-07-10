@@ -28,11 +28,12 @@ export function selectionPixelRect(viewport: SheetViewport): {
 } {
   const range = viewport.selectionRange();
   const topLeft = viewport.cellRect({ row: range.r1, col: range.c1 });
+  const bottomRight = viewport.cellRect({ row: range.r2, col: range.c2 });
   return {
     x: topLeft.x,
     y: topLeft.y,
-    width: (range.c2 - range.c1 + 1) * viewport.colWidth,
-    height: (range.r2 - range.r1 + 1) * viewport.rowHeight,
+    width: bottomRight.x + bottomRight.width - topLeft.x,
+    height: bottomRight.y + bottomRight.height - topLeft.y,
   };
 }
 
@@ -120,14 +121,7 @@ export class SheetGridEntity extends Entity {
   render(renderer: IRenderer): void {
     drawRect(renderer, 0, 0, this.width, this.height, "#ffffff");
 
-    const {
-      rowHeaderWidth,
-      columnHeaderHeight,
-      colWidth,
-      rowHeight,
-      scrollX,
-      scrollY,
-    } = this.viewport;
+    const { rowHeaderWidth, columnHeaderHeight } = this.viewport;
     const range = this.viewport.visibleRange();
     const bodyWidth = Math.max(0, this.width - rowHeaderWidth);
     const bodyHeight = Math.max(0, this.height - columnHeaderHeight);
@@ -135,26 +129,25 @@ export class SheetGridEntity extends Entity {
     renderer.save();
     renderer.clip(rowHeaderWidth, columnHeaderHeight, bodyWidth, bodyHeight);
     for (let row = range.rowStart; row <= range.rowEnd; row++) {
-      const y = columnHeaderHeight + row * rowHeight - scrollY;
       for (let col = range.colStart; col <= range.colEnd; col++) {
-        const x = rowHeaderWidth + col * colWidth - scrollX;
+        const { x, y, width, height } = this.viewport.cellRect({ row, col });
         const format = this.model.getFormat(row, col);
         if (format.background)
-          drawRect(renderer, x, y, colWidth, rowHeight, format.background);
+          drawRect(renderer, x, y, width, height, format.background);
         const display = this.model.getDisplay(row, col);
         if (display) {
           const font = `${format.italic ? "italic " : ""}${format.bold ? "700 " : ""}13px Inter, sans-serif`;
           const textWidth = measureText(display, font);
           const textX =
             format.horizontalAlign === "right"
-              ? x + colWidth - textWidth - 6
+              ? x + width - textWidth - 6
               : format.horizontalAlign === "center"
-                ? x + (colWidth - textWidth) / 2
+                ? x + (width - textWidth) / 2
                 : x + 6;
           renderer.fillText(
             display,
             textX,
-            y + 16,
+            y + Math.min(16, height - 6),
             font,
             format.foreground ?? "#1f2937",
           );
@@ -218,7 +211,7 @@ export class SheetGridEntity extends Entity {
     );
 
     for (let col = range.colStart; col <= range.colEnd; col++) {
-      const x = rowHeaderWidth + col * colWidth - scrollX;
+      const x = this.viewport.cellRect({ row: range.rowStart, col }).x;
       renderer.fillText(
         colName(col),
         x + 6,
@@ -228,7 +221,7 @@ export class SheetGridEntity extends Entity {
       );
     }
     for (let row = range.rowStart; row <= range.rowEnd; row++) {
-      const y = columnHeaderHeight + row * rowHeight - scrollY;
+      const y = this.viewport.cellRect({ row, col: range.colStart }).y;
       renderer.fillText(
         String(row + 1),
         6,
@@ -268,24 +261,23 @@ function drawGridLines(
   colEnd: number,
   viewport: SheetViewport,
 ): void {
-  const {
-    rowHeaderWidth,
-    columnHeaderHeight,
-    colWidth,
-    rowHeight,
-    scrollX,
-    scrollY,
-  } = viewport;
+  const { rowHeaderWidth, columnHeaderHeight } = viewport;
   renderer.beginPath();
-  for (let col = colStart; col <= colEnd + 1; col++) {
-    const x = rowHeaderWidth + col * colWidth - scrollX;
+  for (let col = colStart; col <= colEnd; col++) {
+    const x = viewport.cellRect({ row: rowStart, col }).x;
     renderer.moveTo(x, columnHeaderHeight);
     renderer.lineTo(x, viewport.height);
   }
-  for (let row = rowStart; row <= rowEnd + 1; row++) {
-    const y = columnHeaderHeight + row * rowHeight - scrollY;
+  const lastColumn = viewport.cellRect({ row: rowStart, col: colEnd });
+  renderer.moveTo(lastColumn.x + lastColumn.width, columnHeaderHeight);
+  renderer.lineTo(lastColumn.x + lastColumn.width, viewport.height);
+  for (let row = rowStart; row <= rowEnd; row++) {
+    const y = viewport.cellRect({ row, col: colStart }).y;
     renderer.moveTo(rowHeaderWidth, y);
     renderer.lineTo(viewport.width, y);
   }
+  const lastRow = viewport.cellRect({ row: rowEnd, col: colStart });
+  renderer.moveTo(rowHeaderWidth, lastRow.y + lastRow.height);
+  renderer.lineTo(viewport.width, lastRow.y + lastRow.height);
   renderer.stroke("#e2e8f0", 1);
 }

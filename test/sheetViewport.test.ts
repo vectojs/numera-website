@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { SheetAxisMetrics } from "@vectojs/sheets-core";
 import { SheetViewport } from "../src/view/SheetViewport";
 
 describe("SheetViewport", () => {
@@ -121,5 +122,36 @@ describe("SheetViewport", () => {
     view.resize(340, 148);
 
     expect(view.pageRows()).toBe(5);
+  });
+
+  it("uses sparse axis metrics for cell pixels, hit testing, and visible range", () => {
+    const rows = new SheetAxisMetrics(10, 24);
+    const columns = new SheetAxisMetrics(5, 100);
+    rows.set(1, 40);
+    columns.set(1, 160);
+    const view = new SheetViewport({
+      rows: 10,
+      cols: 5,
+      rowHeight: 24,
+      colWidth: 100,
+      rowMetrics: rows,
+      columnMetrics: columns,
+    });
+    view.resize(340, 148);
+
+    expect(view.cellRect({ row: 2, col: 2 })).toEqual({
+      x: 300,
+      y: 92,
+      width: 100,
+      height: 24,
+    });
+    expect(view.cellAt(40, 68)).toEqual({ row: 1, col: 0 });
+    expect(view.cellAt(200, 28)).toEqual({ row: 0, col: 1 });
+    expect(view.visibleRange()).toEqual({
+      rowStart: 0,
+      rowEnd: 4,
+      colStart: 0,
+      colEnd: 2,
+    });
   });
 });
