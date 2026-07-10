@@ -8,6 +8,8 @@ All notable changes to this project are documented in this file.
 
 - Removed the projected sheet-name input when its temporary canvas entity is
   dismissed, preventing it from intercepting later tab actions in WebKit.
+- Wait for Cloudflare's final deployment marker before terminating Wrangler,
+  preventing upload-only CI runs from leaving the production domain stale.
 
 ### Added
 

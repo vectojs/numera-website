@@ -65,7 +65,8 @@ bun run build
 
 ## Deploy
 
-The Cloudflare Pages project is `sheets-website` at
+The canonical application is <https://sheets-website.vectojs.org/>. Its
+Cloudflare Pages project is `sheets-website`; the fallback deployment URL is
 <https://sheets-website.pages.dev>. With an authenticated Wrangler session:
 
 ```bash
@@ -73,8 +74,10 @@ bun run build
 bun run deploy
 ```
 
-The deployment script streams Wrangler output, detects both legacy and v4
-success messages, and exits instead of waiting indefinitely for Wrangler logs.
+The deployment script streams Wrangler output, waits for the final
+`Deployment complete!` marker, and then exits instead of waiting indefinitely
+for Wrangler logs. An upload-only message is not treated as a completed Pages
+deployment.
 
 ## Repository family
 
