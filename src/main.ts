@@ -1,14 +1,16 @@
 import { Scene } from "@vectojs/core";
 import { attachDevtools, auditScene } from "@vectojs/devtools";
-import { createDemoModel } from "@vectojs/sheets-core";
+import { createDemoModel, Workbook } from "@vectojs/sheets-core";
 import { SheetsApp } from "./view/SheetsApp";
 import { measureSceneContainer } from "./view/sceneSizing";
+import { persistWorkbook, restoreWorkbook } from "./view/workbookPersistence";
 
 declare global {
   interface Window {
     __app?: {
       scene: Scene;
       model: ReturnType<typeof createDemoModel>;
+      workbook: Workbook;
       app: SheetsApp;
       audit: () => ReturnType<typeof auditScene>;
     };
@@ -22,8 +24,26 @@ if (!container) throw new Error("Native Sheets requires #sheets-root");
 
 const scene = new Scene(canvas, { disableWindowResize: true });
 scene.renderMode = "onDemand";
-const model = createDemoModel();
-const app = new SheetsApp(scene, model);
+const createDemoWorkbook = (): Workbook => {
+  const demo = createDemoModel();
+  const workbook = new Workbook({
+    name: "Revenue",
+    rows: demo.rows,
+    cols: demo.cols,
+  });
+  for (const cell of demo.getCellsInRange({
+    r1: 0,
+    c1: 0,
+    r2: demo.rows - 1,
+    c2: demo.cols - 1,
+  }))
+    workbook.activeSheet.model.setCell(cell.row, cell.col, cell.raw);
+  const notes = workbook.addSheet("Notes");
+  notes.model.setCell(0, 0, "Use the + tab to add a worksheet.");
+  return workbook;
+};
+const workbook = restoreWorkbook(window.localStorage, createDemoWorkbook);
+const app = new SheetsApp(scene, workbook);
 
 const resize = (): void => {
   const { width, height } = measureSceneContainer(container);
@@ -36,7 +56,10 @@ scene.start();
 
 window.__app = {
   scene,
-  model,
+  get model() {
+    return app.model;
+  },
+  workbook,
   app,
   audit: () => auditScene(scene),
 };
@@ -48,6 +71,7 @@ if (new URLSearchParams(window.location.search).has("debug")) {
 window.addEventListener(
   "beforeunload",
   () => {
+    persistWorkbook(window.localStorage, workbook);
     observer.disconnect();
     app.destroy();
     scene.destroy();

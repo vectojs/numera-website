@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SheetModel } from "@vectojs/sheets-core";
+import { SheetModel, Workbook } from "@vectojs/sheets-core";
 import { SheetController, SheetsApp } from "../src/view/SheetsApp";
 import { SheetViewport } from "../src/view/SheetViewport";
 
@@ -16,6 +16,18 @@ function createController(): {
   });
   viewport.resize(340, 148);
   return { model, controller: new SheetController(model, viewport) };
+}
+
+function workbookWith(model: SheetModel): Workbook {
+  const workbook = new Workbook({ rows: model.rows, cols: model.cols });
+  for (const cell of model.getCellsInRange({
+    r1: 0,
+    c1: 0,
+    r2: model.rows - 1,
+    c2: model.cols - 1,
+  }))
+    workbook.activeSheet.model.setCell(cell.row, cell.col, cell.raw);
+  return workbook;
 }
 
 describe("SheetController", () => {
@@ -138,7 +150,7 @@ describe("SheetsApp", () => {
       resize: () => undefined,
     };
 
-    const app = new SheetsApp(scene as never, model);
+    const app = new SheetsApp(scene as never, workbookWith(model));
 
     expect(app.formulaBar.value).toBe("Month");
   });
@@ -158,7 +170,7 @@ describe("SheetsApp", () => {
       return 0;
     };
     try {
-      const app = new SheetsApp(scene as never, model);
+      const app = new SheetsApp(scene as never, workbookWith(model));
       app.resize(400, 300);
       app.grid.emit("pointerdown", { localX: 40, localY: 28 });
       app.grid.emit("pointerdown", { localX: 40, localY: 28 });

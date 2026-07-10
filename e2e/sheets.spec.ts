@@ -96,3 +96,40 @@ test("drags a canvas range and applies spreadsheet navigation shortcuts", async 
     )
     .toEqual({ active: { row: 9999, col: 99 }, audit: [] });
 });
+
+test("switches and creates workbook sheets through the canvas tab strip", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const tabs = page.getByRole("toolbar", { name: /Workbook sheets/ });
+  const box = await tabs.boundingBox();
+  if (!box)
+    throw new Error("Workbook tab strip a11y surface is not measurable");
+
+  await page.mouse.click(box.x + 120 + 16, box.y + 16);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        active: window.__app?.workbook.activeSheet.name,
+        raw: window.__app?.model.getRaw(0, 0),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({
+      active: "Notes",
+      raw: "Use the + tab to add a worksheet.",
+      audit: [],
+    });
+
+  await page.mouse.click(box.x + 240 + 12, box.y + 16);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        active: window.__app?.workbook.activeSheet.name,
+        count: window.__app?.workbook.sheets.length,
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ active: "Sheet 3", count: 3, audit: [] });
+});

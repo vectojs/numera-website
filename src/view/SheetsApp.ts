@@ -5,11 +5,14 @@ import {
   pasteText,
   SheetHistory,
   SheetModel,
+  Workbook,
 } from "@vectojs/sheets-core";
 import { SheetGridEntity } from "./SheetGridEntity";
+import { SheetTabsEntity } from "./SheetTabsEntity";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 const TOOLBAR_HEIGHT = 48;
+const TABS_HEIGHT = 32;
 
 /** Pure interaction state shared by canvas input and the native editor. */
 export class SheetController {
@@ -112,9 +115,10 @@ export class SheetController {
 
 /** Canvas shell, formula bar and short-lived native cell editor. */
 export class SheetsApp {
-  readonly viewport: SheetViewport;
-  readonly controller: SheetController;
-  readonly grid: SheetGridEntity;
+  viewport: SheetViewport;
+  controller: SheetController;
+  grid: SheetGridEntity;
+  readonly tabs: SheetTabsEntity;
   readonly formulaBar: Input;
 
   private editor: Input | null = null;
@@ -126,8 +130,9 @@ export class SheetsApp {
 
   constructor(
     readonly scene: Scene,
-    readonly model: SheetModel,
+    readonly workbook: Workbook,
   ) {
+    const model = workbook.activeSheet.model;
     this.viewport = new SheetViewport({
       rows: model.rows,
       cols: model.cols,
@@ -135,14 +140,10 @@ export class SheetsApp {
       colWidth: 112,
     });
     this.controller = new SheetController(model, this.viewport);
-    this.grid = new SheetGridEntity(model, this.viewport, {
-      onCellPointerDown: (cell, extend) =>
-        this.handleCellPointerDown(cell, extend),
-      onCellPointerMove: (cell) => this.handleCellPointerMove(cell),
-      onScroll: (x, y) => {
-        this.controller.scroll(x, y);
-        this.scene.markDirty();
-      },
+    this.grid = this.createGrid(model);
+    this.tabs = new SheetTabsEntity(workbook, {
+      onSelect: (id) => this.selectSheet(id),
+      onAdd: () => this.addSheet(),
     });
     this.formulaBar = new Input({
       width: 320,
@@ -165,6 +166,7 @@ export class SheetsApp {
 
     this.scene.add(this.grid);
     this.scene.add(this.formulaBar);
+    this.scene.add(this.tabs);
     this.syncFormulaBar();
     this.keyboardListener = (event) => this.handleKeyboard(event);
     this.copyListener = (event) => this.handleCopy(event);
@@ -181,10 +183,40 @@ export class SheetsApp {
   resize(width: number, height: number): void {
     this.scene.resize(width, height);
     this.grid.setPosition(0, TOOLBAR_HEIGHT);
-    this.grid.resize(width, Math.max(0, height - TOOLBAR_HEIGHT));
+    this.grid.resize(width, Math.max(0, height - TOOLBAR_HEIGHT - TABS_HEIGHT));
     this.formulaBar.setPosition(64, 8);
     this.formulaBar.width = Math.max(120, width - 76);
+    this.tabs.setPosition(0, Math.max(TOOLBAR_HEIGHT, height - TABS_HEIGHT));
+    this.tabs.resize(width, TABS_HEIGHT);
     this.scene.markDirty();
+  }
+
+  get model(): SheetModel {
+    return this.workbook.activeSheet.model;
+  }
+
+  selectSheet(id: string): void {
+    if (id === this.workbook.activeSheetId) return;
+    this.removeEditor(false);
+    this.workbook.setActiveSheet(id);
+    this.scene.remove(this.grid);
+    this.viewport = new SheetViewport({
+      rows: this.model.rows,
+      cols: this.model.cols,
+      rowHeight: 24,
+      colWidth: 112,
+    });
+    this.controller = new SheetController(this.model, this.viewport);
+    this.grid = this.createGrid(this.model);
+    this.scene.add(this.grid);
+    this.resize(this.scene.width, this.scene.height);
+    this.syncFormulaBar();
+    this.scene.markDirty();
+  }
+
+  addSheet(): void {
+    const sheet = this.workbook.addSheet();
+    this.selectSheet(sheet.id);
   }
 
   destroy(): void {
@@ -210,6 +242,18 @@ export class SheetsApp {
     if (isDoublePointer) this.beginEdit();
     else this.syncFormulaBar();
     this.scene.markDirty();
+  }
+
+  private createGrid(model: SheetModel): SheetGridEntity {
+    return new SheetGridEntity(model, this.viewport, {
+      onCellPointerDown: (cell, extend) =>
+        this.handleCellPointerDown(cell, extend),
+      onCellPointerMove: (cell) => this.handleCellPointerMove(cell),
+      onScroll: (x, y) => {
+        this.controller.scroll(x, y);
+        this.scene.markDirty();
+      },
+    });
   }
 
   private handleCellPointerMove(cell: CellPosition): void {
