@@ -21,6 +21,11 @@ test("keeps document, VMT semantics, and audit state aligned while editing", asy
         raw: window.__app?.model.getRaw(0, 1),
         display: window.__app?.model.getDisplay(0, 1),
         audit: window.__app?.audit(),
+        trace: window.__app?.debugTrace?.().map((entry) => ({
+          type: entry.type,
+          source: entry.source,
+          key: entry.key,
+        })),
         tree: window.__app?.scene.getA11yTree(),
       })),
     )
@@ -28,6 +33,9 @@ test("keeps document, VMT semantics, and audit state aligned while editing", asy
       raw: "=2+3",
       display: "5",
       audit: [],
+      trace: expect.arrayContaining([
+        expect.objectContaining({ type: "keydown", source: "a11y" }),
+      ]),
       tree: expect.arrayContaining([
         expect.objectContaining({
           role: "application",

@@ -50,8 +50,9 @@ bun run dev
 
 Open [http://localhost:2323/?debug](http://localhost:2323/?debug) to attach the
 VectoJS devtools panel. The app also exposes `window.__app` with its `scene`,
-`model`, `app`, and `audit()` function. Prefer inspecting this state and
-`auditScene(scene)` before using screenshots.
+`model`, `app`, and `audit()` function. In debug mode, `debugTrace()` returns
+the bounded devtools pointer/wheel/keyboard routing records. Prefer inspecting
+this state and `auditScene(scene)` before using screenshots.
 
 ## Verify
 

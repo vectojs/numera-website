@@ -1,5 +1,9 @@
 import { Scene } from "@vectojs/core";
-import { attachDevtools, auditScene } from "@vectojs/devtools";
+import {
+  attachDevtools,
+  auditScene,
+  type EventTraceEntry,
+} from "@vectojs/devtools";
 import { createDemoModel, Workbook } from "@vectojs/sheets-core";
 import { SheetsApp } from "./view/SheetsApp";
 import { measureSceneContainer } from "./view/sceneSizing";
@@ -13,6 +17,7 @@ declare global {
       workbook: Workbook;
       app: SheetsApp;
       audit: () => ReturnType<typeof auditScene>;
+      debugTrace?: () => readonly EventTraceEntry[];
     };
   }
 }
@@ -65,7 +70,11 @@ window.__app = {
 };
 
 if (new URLSearchParams(window.location.search).has("debug")) {
-  attachDevtools(scene, { refreshInterval: 0 });
+  const devtools = attachDevtools(scene, {
+    refreshInterval: 0,
+    traceEvents: true,
+  });
+  window.__app.debugTrace = () => devtools.trace?.entries ?? [];
 }
 
 window.addEventListener(
