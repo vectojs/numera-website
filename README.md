@@ -24,6 +24,8 @@ package; this repository owns only the VectoJS UI/UX adapter.
 - TSV copy/paste, range clearing, and transactional undo/redo;
 - Ctrl/Command+A selection of the sparse used range plus Ctrl/Command+X/C/V
   and Z/Y document shortcuts, without creating writes for blank cells;
+- ordered multi-sheet workbooks with a canvas-native tab strip, stable sheet
+  identities, and versioned local snapshot persistence with safe recovery;
 - responsive container measurement and `?debug` VMT inspection/audit.
 
 This forge intentionally excludes collaboration, cloud persistence, comments,

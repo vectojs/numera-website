@@ -12,3 +12,4 @@ All notable changes to this project are documented in this file.
 - `?debug` VectoJS devtools hook, exposed state audit, and deterministic model/view tests.
 - Pointer-captured canvas drag selection; Home/End, Ctrl/Command+Home/End and
   PageUp/PageDown navigation; used-range selection and cut support.
+- Workbook tabs, sheet creation, and local versioned snapshot restoration.
