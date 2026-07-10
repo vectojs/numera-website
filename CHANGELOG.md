@@ -10,6 +10,8 @@ All notable changes to this project are documented in this file.
   deployment contract to Numera and `@vectojs/numera-core`.
 - Adopted Microsoft Excel as the primary reference for local workbook behavior
   and personal productivity; cloud collaboration remains outside product scope.
+- Exact-pinned `@vectojs/numera-core@0.3.1` for Excel-compatible boolean cell
+  literals required by XLSX exchange.
 
 ### Fixed
 
