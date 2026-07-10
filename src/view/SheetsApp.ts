@@ -85,6 +85,16 @@ export class SheetController {
   paste(text: string): void {
     this.history.apply(pasteText(text, this.viewport.selected, this.model));
   }
+
+  clearSelection(): void {
+    const range = this.viewport.selectionRange();
+    const writes = [];
+    for (let row = range.r1; row <= range.r2; row++) {
+      for (let col = range.c1; col <= range.c2; col++)
+        writes.push({ row, col, raw: "" });
+    }
+    this.history.apply(writes);
+  }
 }
 
 /** Canvas shell, formula bar and short-lived native cell editor. */
@@ -200,6 +210,13 @@ export class SheetsApp {
       this.scene.markDirty();
       return;
     }
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      this.controller.clearSelection();
+      this.syncFormulaBar();
+      this.scene.markDirty();
+      return;
+    }
     const movement: Record<string, [number, number]> = {
       ArrowUp: [-1, 0],
       ArrowDown: [1, 0],
@@ -269,7 +286,7 @@ export class SheetsApp {
       padding: 6,
       onChange: (next) => this.controller.setDraft(next),
     });
-    editor.setPosition(rect.x, TOOLBAR_HEIGHT + rect.y);
+    editor.setPosition(rect.x, rect.y);
     editor.on("keydown", (event: { key?: string; preventDefault(): void }) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -281,7 +298,7 @@ export class SheetsApp {
     });
     editor.on("blur", () => this.removeEditor(true));
     this.editor = editor;
-    this.scene.add(editor);
+    this.grid.add(editor);
     this.scene.markDirty();
     requestAnimationFrame(() => this.scene.getA11yElement(editor.id)?.focus());
   }
@@ -292,7 +309,7 @@ export class SheetsApp {
     this.editor = null;
     if (commit) this.controller.commitEdit(editor.value);
     else this.controller.cancelEdit();
-    this.scene.remove(editor);
+    this.grid.remove(editor);
     this.syncFormulaBar();
     this.scene.markDirty();
   }

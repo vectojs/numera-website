@@ -76,6 +76,22 @@ describe("SheetController", () => {
     expect(model.getRaw(2, 0)).toBe("");
     expect(model.getRaw(2, 1)).toBe("");
   });
+
+  it("clears the selected range as one undoable transaction", () => {
+    const { model, controller } = createController();
+    model.setCell(0, 0, "left");
+    model.setCell(0, 1, "right");
+    controller.select({ row: 0, col: 0 });
+    controller.extendSelection({ row: 0, col: 1 });
+
+    controller.clearSelection();
+    expect(model.getRaw(0, 0)).toBe("");
+    expect(model.getRaw(0, 1)).toBe("");
+
+    controller.undo();
+    expect(model.getRaw(0, 0)).toBe("left");
+    expect(model.getRaw(0, 1)).toBe("right");
+  });
 });
 
 describe("SheetsApp", () => {
@@ -92,5 +108,31 @@ describe("SheetsApp", () => {
     const app = new SheetsApp(scene as never, model);
 
     expect(app.formulaBar.value).toBe("Month");
+  });
+
+  it("mounts a cell editor as a temporary grid child rather than an overlapping scene sibling", () => {
+    const model = new SheetModel();
+    const scene = {
+      add: () => scene,
+      markDirty: () => undefined,
+      remove: () => scene,
+      resize: () => undefined,
+      getA11yElement: () => undefined,
+    };
+    const originalFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback) => {
+      callback(0);
+      return 0;
+    };
+    try {
+      const app = new SheetsApp(scene as never, model);
+      app.resize(400, 300);
+      app.grid.emit("pointerdown", { localX: 40, localY: 28 });
+      app.grid.emit("pointerdown", { localX: 40, localY: 28 });
+
+      expect(app.grid.children).toHaveLength(1);
+    } finally {
+      globalThis.requestAnimationFrame = originalFrame;
+    }
   });
 });
