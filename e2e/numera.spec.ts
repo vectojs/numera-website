@@ -55,24 +55,48 @@ test("keeps document, VMT semantics, and audit state aligned while editing", asy
     });
 });
 
-test("resizes from the layout container at a narrow viewport", async ({
+test("keeps every command reachable across responsive toolbar breakpoints", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 375, height: 667 });
-  await page.goto("/");
+  const commands = [
+    "Export workbook as JSON",
+    "Export selection as CSV",
+    "Insert rows",
+    "Delete rows",
+    "Insert columns",
+    "Delete columns",
+    "Sort selection ascending",
+    "Sort selection descending",
+    "Import XLSX workbook",
+    "Export XLSX workbook",
+  ];
 
-  await expect
-    .poll(() =>
-      page.evaluate(() => ({
-        scene: [window.__app?.scene.width, window.__app?.scene.height],
-        canvas: [
-          document.querySelector("canvas")?.clientWidth,
-          document.querySelector("canvas")?.clientHeight,
-        ],
-        audit: window.__app?.audit(),
-      })),
-    )
-    .toEqual({ scene: [375, 667], canvas: [375, 667], audit: [] });
+  for (const width of [375, 600, 759, 760]) {
+    await page.setViewportSize({ width, height: 667 });
+    await page.goto("/");
+    for (const name of commands) {
+      const button = page.getByRole("button", { name });
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+      if (!box) throw new Error(`${name} is not measurable at ${width}px`);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          scene: [window.__app?.scene.width, window.__app?.scene.height],
+          canvas: [
+            document.querySelector("canvas")?.clientWidth,
+            document.querySelector("canvas")?.clientHeight,
+          ],
+          audit: window.__app?.audit(),
+        })),
+      )
+      .toEqual({ scene: [width, 667], canvas: [width, 667], audit: [] });
+  }
 });
 
 test("drags a canvas range and applies spreadsheet navigation shortcuts", async ({
@@ -130,11 +154,7 @@ test("applies undoable row structure through the canvas toolbar", async ({
   page,
 }) => {
   await page.goto("/");
-  const toolbar = page.getByRole("toolbar", { name: /structure and export/ });
-  const box = await toolbar.boundingBox();
-  if (!box) throw new Error("Spreadsheet toolbar is not measurable");
-
-  await page.mouse.click(box.x + 132, box.y + 24);
+  await page.getByRole("button", { name: "Insert rows" }).click();
   await expect
     .poll(() =>
       page.evaluate(() => ({
@@ -155,6 +175,120 @@ test("applies undoable row structure through the canvas toolbar", async ({
       })),
     )
     .toEqual({ rows: 10_000, restoredHeader: "Month", audit: [] });
+});
+
+test("sorts selected rows through Canvas and keyboard intentions", async ({
+  page,
+}) => {
+  await page.goto("/?debug");
+  await page.evaluate(() => {
+    const app = window.__app?.app;
+    const model = window.__app?.model;
+    if (!app || !model) throw new Error("Numera debug surface is unavailable");
+    model.setCell(1, 0, "Beta");
+    model.setCell(1, 1, "20");
+    model.setCell(1, 2, "=B2*2");
+    model.setCell(2, 0, "Alpha");
+    model.setCell(2, 1, "10");
+    model.setCell(2, 2, "=B3*2");
+    app.controller.select({ row: 1, col: 2 });
+    app.controller.extendSelection({ row: 2, col: 0 });
+  });
+  await page.keyboard.press("Control+Alt+Shift+ArrowUp");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        first: window.__app?.model.getRaw(1, 0),
+        second: window.__app?.model.getRaw(2, 0),
+      })),
+    )
+    .toEqual({ first: "Beta", second: "Alpha" });
+
+  await page.getByRole("button", { name: "Sort selection ascending" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        first: window.__app?.model.getRaw(1, 0),
+        firstFormula: window.__app?.model.getRaw(1, 2),
+        second: window.__app?.model.getRaw(2, 0),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({
+      first: "Alpha",
+      firstFormula: "=B2*2",
+      second: "Beta",
+      audit: [],
+    });
+  await expect(
+    page.getByRole("status", { name: /Sorted 2 rows ascending by A/ }),
+  ).toBeVisible();
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await page.keyboard.press("Alt+Shift+ArrowDown");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        first: window.__app?.model.getRaw(1, 0),
+        second: window.__app?.model.getRaw(2, 0),
+      })),
+    )
+    .toEqual({ first: "Beta", second: "Alpha" });
+});
+
+test("commits projected editor drafts before a toolbar sort", async ({
+  page,
+}) => {
+  await page.goto("/?debug");
+  await page.evaluate(() => {
+    const app = window.__app?.app;
+    const model = window.__app?.model;
+    if (!app || !model) throw new Error("Numera debug surface is unavailable");
+    model.setCell(1, 0, "Beta");
+    model.setCell(2, 0, "Alpha");
+    app.controller.select({ row: 2, col: 0 });
+    app.controller.extendSelection({ row: 1, col: 0 });
+  });
+
+  await page.getByRole("textbox", { name: "Formula bar" }).fill("Zulu");
+  await page.getByRole("button", { name: "Sort selection ascending" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        first: window.__app?.model.getRaw(1, 0),
+        second: window.__app?.model.getRaw(2, 0),
+      })),
+    )
+    .toEqual({ first: "Alpha", second: "Zulu" });
+
+  await page.evaluate(() => {
+    const app = window.__app?.app;
+    const model = window.__app?.model;
+    if (!app || !model) throw new Error("Numera debug surface is unavailable");
+    model.setCell(1, 0, "Beta");
+    model.setCell(2, 0, "Alpha");
+    app.controller.select({ row: 1, col: 0 });
+    app.controller.extendSelection({ row: 2, col: 0 });
+    (
+      app as unknown as {
+        beginEdit(): void;
+      }
+    ).beginEdit();
+  });
+  await page.getByRole("textbox", { name: "Cell editor" }).fill("Zulu");
+  await page.getByRole("button", { name: "Sort selection ascending" }).click();
+  await expect(page.getByRole("textbox", { name: "Cell editor" })).toHaveCount(
+    0,
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        first: window.__app?.model.getRaw(1, 0),
+        second: window.__app?.model.getRaw(2, 0),
+      })),
+    )
+    .toEqual({ first: "Beta", second: "Zulu" });
 });
 
 test("resizes a row and fills cells through Canvas pointer gestures", async ({
@@ -350,12 +484,9 @@ test("imports and exports an XLSX workbook through Canvas toolbar intentions", a
   page,
 }) => {
   await page.goto("/");
-  const toolbar = page.getByRole("toolbar", { name: /structure and export/ });
-  const box = await toolbar.boundingBox();
-  if (!box) throw new Error("Spreadsheet toolbar is not measurable");
 
   const chooserPromise = page.waitForEvent("filechooser");
-  await page.mouse.click(box.x + 322, box.y + 24);
+  await page.getByRole("button", { name: "Import XLSX workbook" }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles({
     name: "imported.xlsx",
@@ -381,7 +512,7 @@ test("imports and exports an XLSX workbook through Canvas toolbar intentions", a
     });
 
   const downloadPromise = page.waitForEvent("download");
-  await page.mouse.click(box.x + 385, box.y + 24);
+  await page.getByRole("button", { name: "Export XLSX workbook" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("numera-workbook.xlsx");
 });
@@ -390,12 +521,9 @@ test("reports corrupt XLSX imports through the Canvas toolbar state", async ({
   page,
 }) => {
   await page.goto("/");
-  const toolbar = page.getByRole("toolbar", { name: /structure and export/ });
-  const box = await toolbar.boundingBox();
-  if (!box) throw new Error("Spreadsheet toolbar is not measurable");
 
   const chooserPromise = page.waitForEvent("filechooser");
-  await page.mouse.click(box.x + 322, box.y + 24);
+  await page.getByRole("button", { name: "Import XLSX workbook" }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles({
     name: "corrupt.xlsx",
@@ -405,7 +533,7 @@ test("reports corrupt XLSX imports through the Canvas toolbar state", async ({
   });
 
   await expect(
-    page.getByRole("toolbar", { name: /Import failed \(INVALID_ARCHIVE\)/ }),
+    page.getByRole("status", { name: /Import failed \(INVALID_ARCHIVE\)/ }),
   ).toBeVisible();
 });
 

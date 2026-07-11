@@ -18,6 +18,10 @@ All notable changes to this project are documented in this file.
 - Exact-pinned `@vectojs/numera-core@0.4.0`,
   `@vectojs/numera-xlsx@0.1.1`, and `@vectojs/ui@1.1.3` for one Workbook type,
   formula-aware range transfer, and the latest stable VectoJS UI fixes.
+- Exact-pinned `@vectojs/core@1.4.0`, `@vectojs/ui@1.6.1`,
+  `@vectojs/devtools@0.3.1`, `@vectojs/numera-core@0.5.0`, and
+  `@vectojs/numera-xlsx@0.1.2`. Numera consumes focused UI and headless
+  DevTools entries while the visual inspector remains debug-only.
 
 ### Fixed
 
@@ -27,11 +31,23 @@ All notable changes to this project are documented in this file.
   dismissed, preventing it from intercepting later tab actions in WebKit.
 - Wait for Cloudflare's final deployment marker before terminating Wrangler,
   preventing upload-only CI runs from leaving the production domain stale.
+- Commit formula-bar and cell-editor drafts before document commands capture
+  coordinates, preventing sorting from losing text or writing it into a moved
+  row. Formula-bar commits also preserve the existing range selection.
+- Ignore unrecognized Ctrl/Command or Alt shortcut combinations instead of
+  falling through to ordinary cell navigation.
+- Guard the normal Vite entry against rich-content dependency leakage and a
+  350 KiB uncompressed size regression.
 
 ### Added
 
 - Formula-aware fill and internal copy/paste that preserve exact formats,
   translate relative/mixed/absolute A1 references, and undo as one transaction.
+- Stable ascending/descending range sorting by the active column, exposed
+  through semantic VMT buttons and exact Alt+Shift+Arrow shortcuts.
+- Responsive command reflow at 375, 600, 759, and 760 logical pixels. All ten
+  commands remain reachable with 44px targets, role-based browser automation,
+  stable toolbar naming, and separate status semantics.
 
 - Repository `Justfile` with shared development, verification, selectable local
   browser verification, full CI browser matrix, and Cloudflare Pages deployment
@@ -54,8 +70,8 @@ All notable changes to this project are documented in this file.
 - Canvas JSON/CSV export controls and comma-delimited clipboard import.
 - Canvas row/column insertion and deletion controls backed by Core's sparse
   structural history, formula-reference rewriting, and viewport-bound
-  reconciliation. Narrow viewports keep those controls while compacting
-  lower-priority export buttons.
+  reconciliation. Narrow viewports reflow every command without hiding import
+  or export actions.
 - Exact-pinned `@vectojs/numera-core@0.3.0` with sparse persistent row/column
   metrics, structural remapping, and undoable axis-size history.
 - Canvas header-edge resize and selection fill-handle gestures with live VMT

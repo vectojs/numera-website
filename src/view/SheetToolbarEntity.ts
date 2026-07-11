@@ -8,66 +8,215 @@ export type SheetToolbarAction =
   | "insert-row"
   | "delete-row"
   | "insert-column"
-  | "delete-column";
+  | "delete-column"
+  | "sort-ascending"
+  | "sort-descending";
 
-interface ToolbarButton {
+interface ToolbarCommand {
   id: SheetToolbarAction;
+  text: string;
   label: string;
-  x: number;
   width: number;
 }
 
-const WIDE_BUTTONS: readonly ToolbarButton[] = [
-  { id: "export-json", label: "JSON", x: 8, width: 48 },
-  { id: "export-csv", label: "CSV", x: 60, width: 44 },
-  { id: "insert-row", label: "+R", x: 112, width: 40 },
-  { id: "delete-row", label: "−R", x: 156, width: 40 },
-  { id: "insert-column", label: "+C", x: 200, width: 40 },
-  { id: "delete-column", label: "−C", x: 244, width: 40 },
-  { id: "import-xlsx", label: "Import", x: 292, width: 60 },
-  { id: "export-xlsx", label: "XLSX", x: 356, width: 58 },
+const COMMANDS: readonly ToolbarCommand[] = [
+  {
+    id: "export-json",
+    text: "JSON",
+    label: "Export workbook as JSON",
+    width: 48,
+  },
+  {
+    id: "export-csv",
+    text: "CSV",
+    label: "Export selection as CSV",
+    width: 44,
+  },
+  { id: "insert-row", text: "+R", label: "Insert rows", width: 44 },
+  { id: "delete-row", text: "−R", label: "Delete rows", width: 44 },
+  { id: "insert-column", text: "+C", label: "Insert columns", width: 44 },
+  { id: "delete-column", text: "−C", label: "Delete columns", width: 44 },
+  {
+    id: "sort-ascending",
+    text: "A↑",
+    label: "Sort selection ascending",
+    width: 44,
+  },
+  {
+    id: "sort-descending",
+    text: "A↓",
+    label: "Sort selection descending",
+    width: 44,
+  },
+  {
+    id: "import-xlsx",
+    text: "Import",
+    label: "Import XLSX workbook",
+    width: 64,
+  },
+  {
+    id: "export-xlsx",
+    text: "XLSX",
+    label: "Export XLSX workbook",
+    width: 58,
+  },
 ] as const;
 
-const COMPACT_BUTTONS: readonly ToolbarButton[] = [
-  { id: "insert-row", label: "+R", x: 8, width: 40 },
-  { id: "delete-row", label: "−R", x: 52, width: 40 },
-  { id: "insert-column", label: "+C", x: 96, width: 40 },
-  { id: "delete-column", label: "−C", x: 140, width: 40 },
-] as const;
+const BUTTON_HEIGHT = 44;
+const BUTTON_GAP = 4;
+const EDGE_PADDING = 8;
+const STATUS_HEIGHT = 16;
 
-/** Canvas structural and export controls supplied by the application adapter. */
+class ToolbarButtonEntity extends Entity {
+  private hovered = false;
+  private pressed = false;
+  private focused = false;
+
+  constructor(
+    readonly command: ToolbarCommand,
+    onAction: (action: SheetToolbarAction) => void,
+  ) {
+    super();
+    this.width = command.width;
+    this.height = BUTTON_HEIGHT;
+    this.interactive = true;
+    this.on("click", () => onAction(command.id));
+    this.on("hover", () => this.setVisualState("hovered", true));
+    this.on("pointerleave", () => {
+      this.setVisualState("hovered", false);
+      this.setVisualState("pressed", false);
+    });
+    this.on("pointerdown", () => this.setVisualState("pressed", true));
+    this.on("pointerup", () => this.setVisualState("pressed", false));
+    this.on("focus", () => this.setVisualState("focused", true));
+    this.on("blur", () => this.setVisualState("focused", false));
+  }
+
+  getA11yAttributes(): A11yAttributes {
+    return { tag: "button", role: "button", label: this.command.label };
+  }
+
+  isPointInside(sceneX: number, sceneY: number): boolean {
+    const local = this.worldToLocal(sceneX, sceneY);
+    return (
+      local !== null &&
+      local.x >= 0 &&
+      local.y >= 0 &&
+      local.x < this.width &&
+      local.y < this.height
+    );
+  }
+
+  render(renderer: IRenderer): void {
+    renderer.beginPath();
+    renderer.roundRect(0, 0, this.width, this.height, 6);
+    renderer.fill(
+      this.pressed ? "#dbeafe" : this.hovered ? "#eff6ff" : "#ffffff",
+    );
+    if (this.focused) renderer.stroke("#1a73e8", 2);
+    renderer.fillText(
+      this.command.text,
+      Math.max(8, (this.width - this.command.text.length * 7) / 2),
+      27,
+      "600 12px Inter, sans-serif",
+      "#334155",
+    );
+  }
+
+  private setVisualState(
+    key: "hovered" | "pressed" | "focused",
+    value: boolean,
+  ): void {
+    if (this[key] === value) return;
+    this[key] = value;
+    this.scene?.markDirty();
+  }
+}
+
+class ToolbarStatusEntity extends Entity {
+  constructor(private text: string) {
+    super();
+    this.height = STATUS_HEIGHT;
+    this.interactive = true;
+  }
+
+  setText(text: string): void {
+    this.text = text;
+  }
+
+  getA11yAttributes(): A11yAttributes {
+    return { role: "status", label: this.text };
+  }
+
+  isPointInside(): boolean {
+    return false;
+  }
+
+  render(renderer: IRenderer): void {
+    const maximumCharacters = Math.max(1, Math.floor(this.width / 6.5));
+    const text =
+      this.text.length > maximumCharacters
+        ? `${this.text.slice(0, Math.max(0, maximumCharacters - 1))}…`
+        : this.text;
+    renderer.fillText(
+      text,
+      0,
+      12,
+      "500 11px Inter, sans-serif",
+      this.text.startsWith("Import failed") ? "#b91c1c" : "#475569",
+    );
+  }
+}
+
+/** Canvas-native command bar whose actions remain VMT-addressable at every width. */
 export class SheetToolbarEntity extends Entity {
-  private compact = false;
-  private status = "";
+  private readonly buttons: ToolbarButtonEntity[];
+  private statusEntity: ToolbarStatusEntity | null = null;
 
-  constructor(private readonly onAction: (action: SheetToolbarAction) => void) {
+  constructor(onAction: (action: SheetToolbarAction) => void) {
     super();
     this.interactive = true;
-    this.on("pointerdown", (event: { localX?: number; localY?: number }) => {
-      if (event.localX === undefined || event.localY === undefined) return;
-      const button = this.buttons().find(
-        (candidate) =>
-          event.localX! >= candidate.x &&
-          event.localX! < candidate.x + candidate.width &&
-          event.localY! >= 8 &&
-          event.localY! < 40,
-      );
-      if (button) this.onAction(button.id);
-    });
+    this.buttons = COMMANDS.map(
+      (command) => new ToolbarButtonEntity(command, onAction),
+    );
+    for (const button of this.buttons) this.add(button);
   }
 
-  resize(width: number, height: number): void {
+  /** Reflow commands within the available logical width. */
+  resize(width: number): void {
     this.width = width;
-    this.height = height;
-  }
-
-  /** Small viewports keep structural controls and defer low-priority exports. */
-  setCompact(compact: boolean): void {
-    this.compact = compact;
+    let x = EDGE_PADDING;
+    let y = EDGE_PADDING;
+    const rightEdge = Math.max(EDGE_PADDING, width - EDGE_PADDING);
+    for (const button of this.buttons) {
+      if (x > EDGE_PADDING && x + button.width > rightEdge) {
+        x = EDGE_PADDING;
+        y += BUTTON_HEIGHT + BUTTON_GAP;
+      }
+      button.setPosition(x, y);
+      x += button.width + BUTTON_GAP;
+    }
+    const statusY = y + BUTTON_HEIGHT + BUTTON_GAP;
+    this.height = statusY + STATUS_HEIGHT + EDGE_PADDING;
+    if (this.statusEntity) {
+      this.statusEntity.setPosition(EDGE_PADDING, statusY);
+      this.statusEntity.width = Math.max(0, width - EDGE_PADDING * 2);
+    }
   }
 
   setStatus(status: string): void {
-    this.status = status;
+    if (!status) {
+      if (this.statusEntity) this.remove(this.statusEntity);
+      this.statusEntity = null;
+      this.scene?.markDirty();
+      return;
+    }
+    if (!this.statusEntity) {
+      this.statusEntity = new ToolbarStatusEntity(status);
+      this.add(this.statusEntity);
+    } else this.statusEntity.setText(status);
+    this.resize(this.width);
+    this.scene?.markDirty();
   }
 
   isPointInside(sceneX: number, sceneY: number): boolean {
@@ -84,9 +233,7 @@ export class SheetToolbarEntity extends Entity {
   getA11yAttributes(): A11yAttributes {
     return {
       role: "toolbar",
-      label: this.status
-        ? `Spreadsheet structure and export toolbar. ${this.status}`
-        : "Spreadsheet structure and export toolbar",
+      label: "Spreadsheet structure and export toolbar with data sorting",
     };
   }
 
@@ -94,38 +241,5 @@ export class SheetToolbarEntity extends Entity {
     renderer.beginPath();
     renderer.roundRect(0, 0, this.width, this.height, 0);
     renderer.fill("#f8fafc");
-    for (const button of this.buttons()) {
-      renderer.beginPath();
-      renderer.roundRect(button.x, 8, button.width, 32, 5);
-      renderer.fill("#ffffff");
-      renderer.fillText(
-        button.label,
-        button.x + 8,
-        28,
-        "600 12px Inter, sans-serif",
-        "#334155",
-      );
-    }
-    if (this.status) {
-      const maximumCharacters = Math.max(
-        1,
-        Math.floor((this.width - 16) / 6.5),
-      );
-      const text =
-        this.status.length > maximumCharacters
-          ? `${this.status.slice(0, Math.max(0, maximumCharacters - 1))}…`
-          : this.status;
-      renderer.fillText(
-        text,
-        8,
-        56,
-        "500 11px Inter, sans-serif",
-        this.status.startsWith("Import failed") ? "#b91c1c" : "#475569",
-      );
-    }
-  }
-
-  private buttons(): readonly ToolbarButton[] {
-    return this.compact ? COMPACT_BUTTONS : WIDE_BUTTONS;
   }
 }

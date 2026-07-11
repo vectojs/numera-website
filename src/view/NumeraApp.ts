@@ -1,8 +1,9 @@
 import { Scene } from "@vectojs/core";
-import { Input } from "@vectojs/ui";
+import { Input } from "@vectojs/ui/input";
 import {
   type CellFormat,
   captureRange,
+  colName,
   copyRange,
   fromCsv,
   pasteText,
@@ -10,6 +11,8 @@ import {
   SheetModel,
   type SheetRangePayload,
   type SheetStructureOperation,
+  sortRange,
+  type SortDirection,
   type Rect,
   toCsv,
   toWorkbookJson,
@@ -25,10 +28,9 @@ import {
   type XlsxFileBridge,
 } from "./xlsxFileBridge";
 
-const TOOLBAR_HEIGHT = 64;
-const TOOLBAR_WIDTH = 422;
-const COMPACT_TOOLBAR_WIDTH = 188;
-const COMPACT_TOOLBAR_BREAKPOINT = 480;
+const TOOLBAR_WIDTH = 530;
+const COMPACT_TOOLBAR_BREAKPOINT = 760;
+const COMPACT_TOOLBAR_Y = 48;
 const TABS_HEIGHT = 32;
 
 export interface NumeraAppOptions {
@@ -248,6 +250,14 @@ export class SheetController {
     this.viewport.extendSelection({ row: target.r2, col: target.c2 });
   }
 
+  /** Sort complete selected rows by the active column as one history entry. */
+  sortSelection(direction: SortDirection): void {
+    const range = this.viewport.selectionRange();
+    this.history.applyCellStates(
+      sortRange(this.model, range, this.viewport.selected.col, direction),
+    );
+  }
+
   private applyStructure(operation: SheetStructureOperation): boolean {
     this.history.applyStructure(operation);
     this.syncViewportMetrics();
@@ -277,6 +287,7 @@ export class NumeraApp {
 
   private editor: Input | null = null;
   private tabEditor: Input | null = null;
+  private formulaDraftDirty = false;
   private lastPointer: { cell: CellPosition; at: number } | null = null;
   private readonly keyboardListener: (event: KeyboardEvent) => void;
   private readonly copyListener: (event: ClipboardEvent) => void;
@@ -323,7 +334,10 @@ export class NumeraApp {
       bg: "#ffffff",
       border: "#cbd5e1",
       color: "#0f172a",
-      onChange: (value) => this.controller.setDraft(value),
+      onChange: (value) => {
+        this.formulaDraftDirty = true;
+        this.controller.setDraft(value);
+      },
     });
     this.formulaBar.on(
       "keydown",
@@ -354,16 +368,19 @@ export class NumeraApp {
 
   resize(width: number, height: number): void {
     this.scene.resize(width, height);
-    this.grid.setPosition(0, TOOLBAR_HEIGHT);
-    this.grid.resize(width, Math.max(0, height - TOOLBAR_HEIGHT - TABS_HEIGHT));
-    this.toolbar.setPosition(0, 0);
     const compactToolbar = width < COMPACT_TOOLBAR_BREAKPOINT;
-    const toolbarWidth = compactToolbar ? COMPACT_TOOLBAR_WIDTH : TOOLBAR_WIDTH;
-    this.toolbar.setCompact(compactToolbar);
-    this.toolbar.resize(toolbarWidth, TOOLBAR_HEIGHT);
-    this.formulaBar.setPosition(toolbarWidth + 8, 8);
-    this.formulaBar.width = Math.max(0, width - toolbarWidth - 20);
-    this.tabs.setPosition(0, Math.max(TOOLBAR_HEIGHT, height - TABS_HEIGHT));
+    const toolbarWidth = compactToolbar ? width : TOOLBAR_WIDTH;
+    this.toolbar.setPosition(0, compactToolbar ? COMPACT_TOOLBAR_Y : 0);
+    this.toolbar.resize(toolbarWidth);
+    this.formulaBar.setPosition(compactToolbar ? 8 : toolbarWidth + 8, 8);
+    this.formulaBar.width = Math.max(
+      0,
+      compactToolbar ? width - 16 : width - toolbarWidth - 20,
+    );
+    const contentTop = this.toolbar.y + this.toolbar.height;
+    this.grid.setPosition(0, contentTop);
+    this.grid.resize(width, Math.max(0, height - contentTop - TABS_HEIGHT));
+    this.tabs.setPosition(0, Math.max(contentTop, height - TABS_HEIGHT));
     this.tabs.resize(width, TABS_HEIGHT);
     this.scene.markDirty();
   }
@@ -567,6 +584,7 @@ export class NumeraApp {
       event.preventDefault();
       if (event.shiftKey) this.controller.redo();
       else this.controller.undo();
+      this.toolbar.setStatus("");
       this.syncFormulaBar();
       this.scene.markDirty();
       return;
@@ -574,6 +592,7 @@ export class NumeraApp {
     if (modifier && event.key.toLowerCase() === "y") {
       event.preventDefault();
       this.controller.redo();
+      this.toolbar.setStatus("");
       this.syncFormulaBar();
       this.scene.markDirty();
       return;
@@ -593,6 +612,17 @@ export class NumeraApp {
           : { italic: !current.italic },
       );
       this.scene.markDirty();
+      return;
+    }
+    if (
+      event.altKey &&
+      event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      (event.key === "ArrowUp" || event.key === "ArrowDown")
+    ) {
+      event.preventDefault();
+      this.sortSelection(event.key === "ArrowUp" ? "ascending" : "descending");
       return;
     }
     if (event.key === "Home" || event.key === "End") {
@@ -621,6 +651,7 @@ export class NumeraApp {
       this.scene.markDirty();
       return;
     }
+    if (event.altKey || modifier) return;
     if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();
       this.controller.clearSelection();
@@ -764,8 +795,7 @@ export class NumeraApp {
   }
 
   private commitFormulaBar(): void {
-    if (this.editor) return;
-    this.controller.select(this.viewport.selected);
+    if (this.editor || !this.formulaDraftDirty) return;
     this.controller.writeSelected(this.formulaBar.value);
     this.syncFormulaBar();
     this.scene.markDirty();
@@ -774,6 +804,14 @@ export class NumeraApp {
   private syncFormulaBar(): void {
     const { row, col } = this.viewport.selected;
     this.formulaBar.value = this.model.getRaw(row, col);
+    this.formulaDraftDirty = false;
+  }
+
+  /** Commit projected editors before a command captures document coordinates. */
+  private prepareDocumentCommand(): void {
+    if (this.editor) this.removeEditor(true);
+    if (this.tabEditor) this.removeTabEditor(true);
+    this.commitFormulaBar();
   }
 
   private copyExport(format: "json" | "csv"): void {
@@ -787,6 +825,7 @@ export class NumeraApp {
   private async handleToolbarAction(
     action: import("./SheetToolbarEntity").SheetToolbarAction,
   ): Promise<void> {
+    this.prepareDocumentCommand();
     switch (action) {
       case "export-json":
         this.copyExport("json");
@@ -812,7 +851,24 @@ export class NumeraApp {
       case "delete-column":
         this.controller.deleteColumns();
         break;
+      case "sort-ascending":
+        this.sortSelection("ascending");
+        return;
+      case "sort-descending":
+        this.sortSelection("descending");
+        return;
     }
+    this.syncFormulaBar();
+    this.scene.markDirty();
+  }
+
+  private sortSelection(direction: SortDirection): void {
+    const range = this.viewport.selectionRange();
+    const keyColumn = this.viewport.selected.col;
+    this.controller.sortSelection(direction);
+    this.toolbar.setStatus(
+      `Sorted ${range.r2 - range.r1 + 1} rows ${direction} by ${colName(keyColumn)}.`,
+    );
     this.syncFormulaBar();
     this.scene.markDirty();
   }

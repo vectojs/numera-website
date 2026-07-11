@@ -35,15 +35,20 @@ package; this repository owns only the VectoJS UI/UX adapter.
   transactional undo/redo.
 - versioned workbook JSON plus formula-preserving RFC 4180 CSV serialization
   primitives, with canvas JSON/CSV copy controls and CSV paste import, shared
-  by future CLI and MCP adapters.
+  by the CLI and MCP adapters.
 - Canvas-native `Import` and `XLSX` toolbar intentions backed by the exact
-  published `@vectojs/numera-xlsx@0.1.1` adapter. Native file selection and
+  published `@vectojs/numera-xlsx@0.1.2` adapter. Native file selection and
   download elements are transient browser I/O only; the visible toolbar,
   status feedback, workbook replacement, and VMT refresh stay Canvas-native.
 - structural row and column insertion/deletion with sparse-format preservation,
   A1-style formula-reference rewriting, and transactional undo/redo. The
-  Canvas toolbar keeps these document commands on narrow screens while
-  compacting lower-priority export controls.
+  Canvas toolbar reflows every command on narrow screens without hiding import
+  or export paths, and each action is a keyboard-operable VMT button with a
+  minimum 44px hit target.
+- stable ascending/descending range sorting by the active column through
+  `@vectojs/numera-core@0.5.0`, including formula translation, exact format
+  movement, one-step undo, semantic toolbar actions, and Alt+Shift+Arrow
+  shortcuts that reject conflicting Ctrl/Command combinations;
 - sparse per-row and per-column logical sizes, Canvas header-edge resize
   gestures, and a selection fill handle. Gesture previews remain numeric VMT
   state; fill commits translate relative A1 references and copy exact formats
@@ -51,15 +56,16 @@ package; this repository owns only the VectoJS UI/UX adapter.
   Releasing the pointer creates one undoable document transaction.
 - responsive container measurement and `?debug` VMT inspection/audit.
 
-The XLSX codec is loaded only after an import/export action, keeping the normal
-initial application chunk focused on the interactive spreadsheet.
+The XLSX codec and visual DevTools panel are loaded only after their explicit
+actions. Normal startup consumes `@vectojs/ui/input`, `@vectojs/ui/measure`, and
+`@vectojs/devtools/headless`; a build-time budget prevents Markdown/MathJax or
+the inspector panel from leaking back into the interactive spreadsheet entry.
 
 Numera intentionally excludes collaboration, cloud persistence, accounts,
 sharing, comments, permissions, and platform scripting. Microsoft Excel is the
 primary reference for local workbook and file behavior, without claiming
-exhaustive compatibility. `numera-cli` and `numera-skills` are independent,
-published companion repositories; `numera-mcp` is the next adapter over the
-same pure document APIs.
+exhaustive compatibility. `numera-cli`, `numera-skills`, and `numera-mcp` are
+independent published companion repositories over the same pure document APIs.
 
 ## Development
 
@@ -110,10 +116,10 @@ runs the complete Chromium, Firefox, and WebKit matrix used by CI.
 
 ## Repository family
 
-This repository lives in the `vectojs-native/numera/` forge family. The future
-CLI, skills, MCP adapter, and published core document library are separate
-repositories/packages so they share the pure model layer rather than automate
-the canvas UI.
+This repository lives in the `vectojs-native/numera/` forge family. The CLI,
+skills, MCP adapter, XLSX codec, and published core document library remain
+separate repositories/packages so they share the pure model layer rather than
+automate the canvas UI.
 
 ## License
 

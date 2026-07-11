@@ -30,6 +30,14 @@ function workbookWith(model: SheetModel): Workbook {
   return workbook;
 }
 
+function toolbarCommand(app: NumeraApp, label: string) {
+  const command = app.toolbar.children.find(
+    (child) => child.getA11yAttributes()?.label === label,
+  );
+  if (!command) throw new Error(`Missing toolbar command: ${label}`);
+  return command;
+}
+
 describe("SheetController", () => {
   it("commits an edit to the active cell and recalculates its formula", () => {
     const { model, controller } = createController();
@@ -265,6 +273,36 @@ describe("SheetController", () => {
     expect(model.getRaw(2, 2)).toBe("");
     expect(model.getRaw(2, 3)).toBe("");
   });
+
+  it("sorts selected rows by the active column as one undoable transaction", () => {
+    const { model, controller } = createController();
+    model.setCell(1, 0, "Beta");
+    model.setCell(1, 1, "20");
+    model.setCell(1, 2, "=B2*2");
+    model.setFormat(1, 0, { background: "#fee2e2" });
+    model.setCell(2, 0, "Alpha");
+    model.setCell(2, 1, "10");
+    model.setCell(2, 2, "=B3*2");
+    model.setFormat(2, 0, { background: "#dcfce7" });
+    controller.select({ row: 1, col: 2 });
+    controller.extendSelection({ row: 2, col: 0 });
+
+    controller.sortSelection("ascending");
+    expect(model.getRaw(1, 0)).toBe("Alpha");
+    expect(model.getRaw(1, 2)).toBe("=B2*2");
+    expect(model.getFormat(1, 0)).toEqual({ background: "#dcfce7" });
+    expect(controller.viewport.selectionRange()).toEqual({
+      r1: 1,
+      c1: 0,
+      r2: 2,
+      c2: 2,
+    });
+
+    controller.undo();
+    expect(model.getRaw(1, 0)).toBe("Beta");
+    expect(model.getRaw(1, 2)).toBe("=B2*2");
+    expect(model.getFormat(1, 0)).toEqual({ background: "#fee2e2" });
+  });
 });
 
 describe("NumeraApp", () => {
@@ -319,7 +357,7 @@ describe("NumeraApp", () => {
       resize: () => undefined,
     };
     const app = new NumeraApp(scene as never, workbookWith(model));
-    app.resize(440, 300);
+    app.resize(440, 420);
 
     app.grid.emit("pointerdown", { localX: 20, localY: 52 });
     app.grid.emit("pointermove", { localX: 20, localY: 68 });
@@ -360,5 +398,68 @@ describe("NumeraApp", () => {
     expect(app.workbook.activeSheet.name).toBe("Imported");
     expect(app.model.getRaw(0, 0)).toBe("XLSX value");
     expect(app.formulaBar.value).toBe("XLSX value");
+  });
+
+  it("commits a formula-bar draft before a toolbar sort captures the range", () => {
+    const model = new SheetModel(20, 10);
+    model.setCell(1, 0, "Beta");
+    model.setCell(2, 0, "Alpha");
+    const scene = {
+      add: () => scene,
+      markDirty: () => undefined,
+      remove: () => scene,
+      resize: () => undefined,
+    };
+    const app = new NumeraApp(scene as never, workbookWith(model));
+    app.controller.select({ row: 2, col: 0 });
+    app.controller.extendSelection({ row: 1, col: 0 });
+    app.formulaBar.emit("change", { value: "Zulu" });
+
+    toolbarCommand(app, "Sort selection ascending").emit("click", {});
+
+    expect(app.model.getRaw(1, 0)).toBe("Alpha");
+    expect(app.model.getRaw(2, 0)).toBe("Zulu");
+    app.controller.undo();
+    expect(app.model.getRaw(1, 0)).toBe("Zulu");
+    expect(app.model.getRaw(2, 0)).toBe("Alpha");
+  });
+
+  it("commits and removes a cell editor before sorting its selected rows", () => {
+    const model = new SheetModel(20, 10);
+    model.setCell(1, 0, "Beta");
+    model.setCell(2, 0, "Alpha");
+    const scene = {
+      add: () => scene,
+      getA11yElement: () => undefined,
+      markDirty: () => undefined,
+      remove: () => scene,
+      resize: () => undefined,
+    };
+    const originalFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback) => {
+      callback(0);
+      return 0;
+    };
+    try {
+      const app = new NumeraApp(scene as never, workbookWith(model));
+      app.resize(800, 420);
+      app.controller.select({ row: 1, col: 0 });
+      app.controller.extendSelection({ row: 2, col: 0 });
+      (
+        app as unknown as {
+          beginEdit(initialValue?: string): void;
+        }
+      ).beginEdit();
+      const editor = app.grid.children[0];
+      editor.emit("change", { value: "Zulu" });
+
+      toolbarCommand(app, "Sort selection ascending").emit("click", {});
+
+      expect(app.grid.children).toHaveLength(0);
+      expect(app.model.getRaw(1, 0)).toBe("Beta");
+      expect(app.model.getRaw(2, 0)).toBe("Zulu");
+    } finally {
+      globalThis.requestAnimationFrame = originalFrame;
+    }
   });
 });

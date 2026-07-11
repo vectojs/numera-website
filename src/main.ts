@@ -1,9 +1,10 @@
 import { Scene } from "@vectojs/core";
 import {
-  attachDevtools,
   auditScene,
+  createEventTrace,
+  type EventTrace,
   type EventTraceEntry,
-} from "@vectojs/devtools";
+} from "@vectojs/devtools/headless";
 import { createDemoModel, Workbook } from "@vectojs/numera-core";
 import { NumeraApp } from "./view/NumeraApp";
 import { measureSceneContainer } from "./view/sceneSizing";
@@ -29,6 +30,8 @@ if (!container) throw new Error("Numera requires #numera-root");
 
 const scene = new Scene(canvas, { disableWindowResize: true });
 scene.renderMode = "onDemand";
+let debugTrace: EventTrace | null = null;
+let detachDevtools: (() => void) | null = null;
 const createDemoWorkbook = (): Workbook => {
   const demo = createDemoModel();
   const workbook = new Workbook({
@@ -74,17 +77,23 @@ window.__app = {
 };
 
 if (new URLSearchParams(window.location.search).has("debug")) {
-  const devtools = attachDevtools(scene, {
-    refreshInterval: 0,
-    traceEvents: true,
+  debugTrace = createEventTrace(scene);
+  window.__app.debugTrace = () => debugTrace?.entries ?? [];
+  void import("@vectojs/devtools").then(({ attachDevtools }) => {
+    const panel = attachDevtools(scene, {
+      refreshInterval: 0,
+      traceEvents: false,
+    });
+    detachDevtools = () => panel.detach();
   });
-  window.__app.debugTrace = () => devtools.trace?.entries ?? [];
 }
 
 window.addEventListener(
   "beforeunload",
   () => {
     persistWorkbook(window.localStorage, app.workbook);
+    debugTrace?.destroy();
+    detachDevtools?.();
     observer.disconnect();
     app.destroy();
     scene.destroy();
