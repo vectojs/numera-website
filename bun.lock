@@ -5,16 +5,16 @@
     "": {
       "name": "numera-website",
       "dependencies": {
-        "@vectojs/core": "1.4.0",
+        "@vectojs/core": "1.5.0",
         "@vectojs/numera-core": "0.5.0",
         "@vectojs/numera-xlsx": "0.1.2",
-        "@vectojs/ui": "1.6.1",
+        "@vectojs/ui": "1.7.1",
       },
       "devDependencies": {
         "@changesets/cli": "^2.31.0",
         "@playwright/test": "^1.61.1",
         "@types/bun": "^1.3.0",
-        "@vectojs/devtools": "0.3.1",
+        "@vectojs/devtools": "0.4.0",
         "oxlint": "^1.71.0",
         "prettier": "^3.9.1",
         "typescript": "^7.0.2",
@@ -338,15 +338,15 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
-    "@vectojs/core": ["@vectojs/core@1.4.0", "", {}, "sha512-P1TjMKG4S9AY0xf+LrqWDdZ0GNQEyPw34uGP6vqgWlKbdne6ThsAo9jiq1DngJuq7pEriKEwyZHfaJFlB0I8kQ=="],
+    "@vectojs/core": ["@vectojs/core@1.5.0", "", {}, "sha512-9pEO3UTmG3SNpg/sG2VBeQWntlrekpPa4zXYE7kSF1iVj5uas50KiHAbmWBugN8pVFMgebw1EY2IrqWE/QUcnQ=="],
 
-    "@vectojs/devtools": ["@vectojs/devtools@0.3.1", "", { "peerDependencies": { "@vectojs/core": ">=1.0.0 <2.0.0", "@vectojs/ui": ">=1.0.0 <2.0.0" }, "optionalPeers": ["@vectojs/ui"] }, "sha512-vArH4yo63pVbAkVrVB08H00NsDTo4tsPWCytcCSoC8C8u7n3XdETakFv+5UiLwdly0DbJagKqunAa612mhGwtQ=="],
+    "@vectojs/devtools": ["@vectojs/devtools@0.4.0", "", { "peerDependencies": { "@vectojs/core": ">=1.0.0 <2.0.0", "@vectojs/ui": ">=1.0.0 <2.0.0" }, "optionalPeers": ["@vectojs/ui"] }, "sha512-+9iaIOhxi6OQbWa0lftInNmaZr+8MkKHfV91vWEnqm1CVPRn515UnVhPWOWDTQdckLRWGEsq1wcl/BwZYqiUDA=="],
 
     "@vectojs/numera-core": ["@vectojs/numera-core@0.5.0", "", {}, "sha512-yZqhN59f9Kre5kkNpBtjRFWvbYFhcpRcHJMx3mPDerWapgbdHmPpsJyuRXxzOx+Sqt7atCpT0VnDmmIxwxWlaQ=="],
 
     "@vectojs/numera-xlsx": ["@vectojs/numera-xlsx@0.1.2", "", { "dependencies": { "@vectojs/numera-core": "0.5.0", "exceljs": "4.4.0" } }, "sha512-axbq4ZCAYGhKf8n7wGKTwRqtW6xp6ypTL+5a/TrzcbqxJJ/0Uo+9ohhU0XIejdRLWVUeW5lkfPx/YI1IRP7DZg=="],
 
-    "@vectojs/ui": ["@vectojs/ui@1.6.1", "", { "dependencies": { "marked": "^18.0.6", "mathjax-full": "^3.2.2" }, "peerDependencies": { "@vectojs/core": ">=0.1.0" } }, "sha512-zdMROF6OyJkvSXdGk8NCNwkjJ+LZEBJ2WAvjszWhvpGDHZS8NNqwYoJADJhvPziuxUpgSQFUTQQJQtqARRtx8g=="],
+    "@vectojs/ui": ["@vectojs/ui@1.7.1", "", { "dependencies": { "marked": "^18.0.6", "mathjax-full": "^3.2.2" }, "peerDependencies": { "@vectojs/core": ">=1.0.0 <2.0.0" } }, "sha512-XyzelSfyPdfWBineI5IT/O52oLHPobrS4yZhsUTCJMueM8RuN8XLKMqZfhSY2XTGobgi3nCwRTmWQvdQMYuuvA=="],
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.9.10", "", {}, "sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw=="],
 

@@ -23,6 +23,8 @@ package; this repository owns only the VectoJS UI/UX adapter.
   keyboard navigation (arrows, Shift, Home/End, Page, Ctrl/Command corners),
   and double-click/F2/typing editing;
 - native IME, clipboard, selection, and undo support through VectoJS `Input`;
+- browser-native selection, copy, and find for projected VectoJS status text,
+  without overriding workbook clipboard shortcuts when no text is selected;
 - external TSV copy/paste plus internal formula/format-aware range transfer,
   range clearing, and transactional undo/redo;
 - Ctrl/Command+A selection of the sparse used range plus Ctrl/Command+X/C/V

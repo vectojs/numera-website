@@ -697,7 +697,8 @@ export class NumeraApp {
   }
 
   private handleCopy(event: ClipboardEvent): void {
-    if (isNativeTextTarget(document.activeElement)) return;
+    if (isNativeTextTarget(document.activeElement) || hasNativeTextSelection())
+      return;
     event.preventDefault();
     this.internalClipboard = {
       marker: `numera-range-${++this.clipboardSequence}`,
@@ -711,7 +712,8 @@ export class NumeraApp {
   }
 
   private handleCut(event: ClipboardEvent): void {
-    if (isNativeTextTarget(document.activeElement)) return;
+    if (isNativeTextTarget(document.activeElement) || hasNativeTextSelection())
+      return;
     event.preventDefault();
     this.internalClipboard = {
       marker: `numera-range-${++this.clipboardSequence}`,
@@ -920,6 +922,11 @@ function isNativeTextTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
   );
+}
+
+/** Browser selection owns copy and cut before the workbook shortcut router. */
+function hasNativeTextSelection(): boolean {
+  return window.getSelection()?.isCollapsed === false;
 }
 
 const NUMERA_RANGE_CLIPBOARD_TYPE = "application/x-numera-range";

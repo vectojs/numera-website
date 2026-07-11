@@ -22,9 +22,15 @@ All notable changes to this project are documented in this file.
   `@vectojs/devtools@0.3.1`, `@vectojs/numera-core@0.5.0`, and
   `@vectojs/numera-xlsx@0.1.2`. Numera consumes focused UI and headless
   DevTools entries while the visual inspector remains debug-only.
+- Exact-pinned `@vectojs/core@1.5.0`, `@vectojs/ui@1.7.1`, and
+  `@vectojs/devtools@0.4.0` for lifecycle-safe content projection, selectable
+  static text, and projected-content event tracing. Toolbar status text uses
+  the lightweight `@vectojs/ui/text` entry.
 
 ### Fixed
 
+- Yield copy and cut to any non-collapsed browser text selection before routing
+  spreadsheet ranges, preserving native selection and clipboard behavior.
 - Isolate Playwright on a configurable E2E port so concurrent Agent development
   servers cannot be mistaken for the test server.
 - Removed the projected sheet-name input when its temporary canvas entity is
@@ -41,6 +47,8 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Cross-browser coverage that selects projected VectoJS text, verifies native
+  copy ownership, and asserts a DevTools `content` route with its VMT identity.
 - Formula-aware fill and internal copy/paste that preserve exact formats,
   translate relative/mixed/absolute A1 references, and undo as one transaction.
 - Stable ascending/descending range sorting by the active column, exposed

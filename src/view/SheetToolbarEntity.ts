@@ -1,4 +1,5 @@
 import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
+import { Text } from "@vectojs/ui/text";
 
 export type SheetToolbarAction =
   | "export-json"
@@ -134,14 +135,32 @@ class ToolbarButtonEntity extends Entity {
 }
 
 class ToolbarStatusEntity extends Entity {
-  constructor(private text: string) {
+  private readonly label: Text;
+  private text: string;
+
+  constructor(text: string) {
     super();
+    this.text = text;
     this.height = STATUS_HEIGHT;
     this.interactive = true;
+    this.label = new Text(text, {
+      font: "500 11px Inter, sans-serif",
+      color: this.statusColor(),
+      lineHeight: 14,
+      selectable: true,
+    });
+    this.add(this.label);
   }
 
   setText(text: string): void {
     this.text = text;
+    this.label.color = this.statusColor();
+    this.layoutLabel();
+  }
+
+  resize(width: number): void {
+    this.width = width;
+    this.layoutLabel();
   }
 
   getA11yAttributes(): A11yAttributes {
@@ -152,19 +171,21 @@ class ToolbarStatusEntity extends Entity {
     return false;
   }
 
-  render(renderer: IRenderer): void {
+  render(): void {}
+
+  private layoutLabel(): void {
     const maximumCharacters = Math.max(1, Math.floor(this.width / 6.5));
     const text =
       this.text.length > maximumCharacters
         ? `${this.text.slice(0, Math.max(0, maximumCharacters - 1))}…`
         : this.text;
-    renderer.fillText(
-      text,
-      0,
-      12,
-      "500 11px Inter, sans-serif",
-      this.text.startsWith("Import failed") ? "#b91c1c" : "#475569",
-    );
+    this.label.setText(text);
+    this.label.setMaxWidth(Math.max(1, this.width));
+    this.label.height = STATUS_HEIGHT;
+  }
+
+  private statusColor(): string {
+    return this.text.startsWith("Import failed") ? "#b91c1c" : "#475569";
   }
 }
 
@@ -200,7 +221,7 @@ export class SheetToolbarEntity extends Entity {
     this.height = statusY + STATUS_HEIGHT + EDGE_PADDING;
     if (this.statusEntity) {
       this.statusEntity.setPosition(EDGE_PADDING, statusY);
-      this.statusEntity.width = Math.max(0, width - EDGE_PADDING * 2);
+      this.statusEntity.resize(Math.max(0, width - EDGE_PADDING * 2));
     }
   }
 

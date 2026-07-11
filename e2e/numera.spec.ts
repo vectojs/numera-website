@@ -55,6 +55,73 @@ test("keeps document, VMT semantics, and audit state aligned while editing", asy
     });
 });
 
+test("yields projected text copy and traces its content route", async ({
+  page,
+}) => {
+  await page.goto("/?debug");
+
+  const result = await page.evaluate(async () => {
+    const debug = window.__app;
+    if (!debug) throw new Error("Numera debug surface is unavailable");
+    const status = "Native selectable status";
+    debug.app.toolbar.setStatus(status);
+    debug.scene.markDirty();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+
+    const content = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-vecto-content]"),
+    ).find((element) => element.textContent === status);
+    if (!content) throw new Error("Projected toolbar status is unavailable");
+
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    const clipboard = new DataTransfer();
+    const copyEvent = new Event("copy", { bubbles: true, cancelable: true });
+    Object.defineProperty(copyEvent, "clipboardData", { value: clipboard });
+    content.dispatchEvent(copyEvent);
+
+    const rect = content.getBoundingClientRect();
+    content.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        clientX: rect.left + 2,
+        clientY: rect.top + 2,
+        pointerId: 1,
+      }),
+    );
+    await Promise.resolve();
+
+    return {
+      selection: selection?.toString(),
+      copyPrevented: copyEvent.defaultPrevented,
+      clipboardText: clipboard.getData("text/plain"),
+      trace: debug
+        .debugTrace?.()
+        .findLast((entry) => entry.type === "pointerdown"),
+    };
+  });
+
+  expect(result).toMatchObject({
+    selection: "Native selectable status",
+    copyPrevented: false,
+    clipboardText: "",
+    trace: {
+      type: "pointerdown",
+      source: "content",
+      defaultPrevented: false,
+    },
+  });
+  expect(result.trace?.targetId).toBeTruthy();
+  expect(result.trace?.targetPath).toContain("Scene > SheetToolbarEntity");
+  expect(result.trace?.targetPath).toContain("Text#");
+});
+
 test("keeps every command reachable across responsive toolbar breakpoints", async ({
   page,
 }) => {
